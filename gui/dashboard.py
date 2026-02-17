@@ -32,6 +32,9 @@ class Dashboard:
         self.area_resultados = None
         self.grafico = None
         
+        # Referencia a ventana de análisis desde archivo
+        self.ventana_analisis_archivo = None
+        
         self.crear_dashboard()
     
     def crear_dashboard(self):
@@ -80,6 +83,38 @@ class Dashboard:
             "hipergeometrica",
             False
         )
+        
+        # Separador
+        separador = ctk.CTkFrame(self.sidebar, height=2, fg_color="gray50")
+        separador.pack(fill="x", padx=10, pady=15)
+        
+        # Sección de análisis
+        titulo_analisis = ctk.CTkLabel(
+            self.sidebar,
+            text="ANÁLISIS",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color=("gray10", "gray90")
+        )
+        titulo_analisis.pack(pady=(0, 10))
+        
+        self.btn_analisis_archivo = ctk.CTkButton(
+            self.sidebar,
+            text="📂 Desde Archivo",
+            font=ctk.CTkFont(size=12),
+            fg_color="transparent",
+            hover_color=("gray70", "gray30"),
+            text_color=("gray10", "gray90"),
+            anchor="w",
+            height=38,
+            corner_radius=8,
+            command=self.abrir_analisis_archivo
+        )
+        self.btn_analisis_archivo.pack(fill="x", padx=8, pady=4)
+    
+    def abrir_analisis_archivo(self):
+        """Abre la ventana de análisis desde archivo"""
+        if self.ventana_principal:
+            self.ventana_principal.abrir_analisis_archivo()
     
     def crear_boton_sidebar(self, texto, distribucion, es_activo):
         """

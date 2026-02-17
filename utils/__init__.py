@@ -31,6 +31,16 @@ from utils.formato import (
     generar_resumen_corto
 )
 
+from utils.file_loader import (
+    FileLoader,
+    ErrorCargaArchivo,
+    ArchivoNoSeleccionadoError,
+    ArchivoVacioError,
+    ArchivoSinEncabezadosError,
+    FormatoNoSoportadoError,
+    ColumnaNoEncontradaError
+)
+
 __all__ = [
     # Cálculos
     'factorial',
@@ -54,5 +64,13 @@ __all__ = [
     # Formato
     'generar_texto_resultados',
     'calcular_moda',
-    'generar_resumen_corto'
+    'generar_resumen_corto',
+    # FileLoader
+    'FileLoader',
+    'ErrorCargaArchivo',
+    'ArchivoNoSeleccionadoError',
+    'ArchivoVacioError',
+    'ArchivoSinEncabezadosError',
+    'FormatoNoSoportadoError',
+    'ColumnaNoEncontradaError'
 ]

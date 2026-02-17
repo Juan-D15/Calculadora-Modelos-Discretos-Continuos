@@ -38,6 +38,7 @@ from utils.formato import (
     generar_texto_resultados_hipergeometrica,
     generar_mensaje_usar_binomial
 )
+from data_viewer import DataViewerWindow
 
 
 class VentanaPrincipal:
@@ -256,3 +257,7 @@ class VentanaPrincipal:
                 "Error Inesperado",
                 f"Ocurrió un error al procesar los datos:\n\n{str(e)}"
             )
+    
+    def abrir_analisis_archivo(self):
+        """Abre la ventana de análisis desde archivo."""
+        DataViewerWindow(master=self.root)
