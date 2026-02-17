@@ -24,7 +24,6 @@ class Dashboard:
         self.ventana_principal = ventana_principal
         self.distribucion_actual = "binomial"
         
-        # Componentes del dashboard
         self.sidebar = None
         self.content_frame = None
         self.campos = None
@@ -32,24 +31,17 @@ class Dashboard:
         self.area_resultados = None
         self.grafico = None
         
-        # Referencia a ventana de análisis desde archivo
         self.ventana_analisis_archivo = None
         
         self.crear_dashboard()
     
     def crear_dashboard(self):
         """Crea la estructura del dashboard con sidebar y contenido"""
-        # Frame principal del dashboard
         self.dashboard_frame = ctk.CTkFrame(self.frame, fg_color="transparent")
         self.dashboard_frame.pack(fill="both", expand=True)
         
-        # Sidebar para navegación
         self.crear_sidebar()
-        
-        # Área de contenido
         self.crear_area_contenido()
-        
-        # Cargar distribución por defecto
         self.cargar_distribucion("binomial")
     
     def crear_sidebar(self):
@@ -62,7 +54,6 @@ class Dashboard:
         self.sidebar.pack(side="left", fill="y", padx=8, pady=8)
         self.sidebar.pack_propagate(False)
         
-        # Título del sidebar
         titulo = ctk.CTkLabel(
             self.sidebar,
             text="DISTRIBUCIONES",
@@ -71,7 +62,6 @@ class Dashboard:
         )
         titulo.pack(pady=(15, 15))
         
-        # Botones de navegación
         self.btn_binomial = self.crear_boton_sidebar(
             "Binomial",
             "binomial",
@@ -84,11 +74,9 @@ class Dashboard:
             False
         )
         
-        # Separador
         separador = ctk.CTkFrame(self.sidebar, height=2, fg_color="gray50")
         separador.pack(fill="x", padx=10, pady=15)
         
-        # Sección de análisis
         titulo_analisis = ctk.CTkLabel(
             self.sidebar,
             text="ANÁLISIS",
@@ -157,14 +145,11 @@ class Dashboard:
         """
         self.distribucion_actual = distribucion
         
-        # Actualizar estado visual de botones
         self.actualizar_botones_sidebar(distribucion)
         
-        # Limpiar contenido anterior
         for widget in self.content_frame.winfo_children():
             widget.destroy()
         
-        # Crear interfaz según distribución
         if distribucion == "binomial":
             self.crear_interfaz_binomial()
         elif distribucion == "poisson":
@@ -193,7 +178,6 @@ class Dashboard:
     
     def crear_interfaz_binomial(self):
         """Crea la interfaz para distribución binomial"""
-        # Título
         titulo = ctk.CTkLabel(
             self.content_frame,
             text="DISTRIBUCIÓN BINOMIAL",
@@ -201,7 +185,6 @@ class Dashboard:
         )
         titulo.pack(pady=(12, 8))
         
-        # Descripción
         descripcion = ctk.CTkLabel(
             self.content_frame,
             text="",
@@ -210,13 +193,11 @@ class Dashboard:
         )
         descripcion.pack(pady=(0, 12))
         
-        # Frame de entrada
         input_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         input_frame.pack(fill="x", padx=15, pady=5)
         
         self.campos = CamposEntrada(input_frame)
         
-        # Frame de botones
         button_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         button_frame.pack(fill="x", padx=15, pady=8)
         
@@ -246,24 +227,19 @@ class Dashboard:
         )
         clear_btn.pack(side="left", padx=5, pady=5)
         
-        # Frame de resultados - Usar grid para mejor control del layout
         results_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         results_frame.pack(fill="both", expand=True, padx=12, pady=8)
         
-        # Configurar grid con pesos: texto (45%), gráfico (55%)
         results_frame.grid_columnconfigure(0, weight=45)
         results_frame.grid_columnconfigure(1, weight=55)
         results_frame.grid_rowconfigure(0, weight=1)
         
-        # Frame para área de texto (45% del ancho)
         text_frame = ctk.CTkFrame(results_frame)
         text_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=0)
         
-        # Frame para gráfico (55% del ancho)
         graph_frame = ctk.CTkFrame(results_frame)
         graph_frame.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=0)
         
-        # Crear componentes de resultados
         self.area_resultados = AreaResultados(text_frame)
         self.grafico = GraficoBinomial(graph_frame)
     
@@ -450,17 +426,28 @@ class Dashboard:
         return None
     
     def mostrar_resultados(self, texto):
-        """Muestra los resultados en el área de texto"""
+        """Muestra los resultados en el área de texto (compatibilidad)"""
         if self.area_resultados:
             self.area_resultados.mostrar_texto(texto)
     
-    def crear_grafico(self, valores_x, probabilidades, n, p, N=None, es_infinita=True):
-        """Crea el gráfico de distribución"""
-        if self.grafico:
-            self.grafico.crear_grafico(valores_x, probabilidades, n, p, N, es_infinita)
+    def mostrar_resultados_binomial(self, datos):
+        """Muestra resultados estructurados de distribución binomial"""
+        if self.area_resultados:
+            self.area_resultados.mostrar_resultados_binomial(datos)
     
-    def crear_grafico_hipergeometrica(self, valores_x, probabilidades, n, N, K):
+    def mostrar_resultados_hipergeometrica(self, datos):
+        """Muestra resultados estructurados de distribución hipergeométrica"""
+        if self.area_resultados:
+            self.area_resultados.mostrar_resultados_hipergeometrica(datos)
+    
+    def crear_grafico(self, valores_x, probabilidades, n, p, N=None, es_infinita=True, x_destacado=None):
+        """Crea el gráfico de distribución binomial"""
+        if self.grafico:
+            self.grafico.crear_grafico(valores_x, probabilidades, n, p, N, es_infinita, x_destacado)
+    
+    def crear_grafico_hipergeometrica(self, valores_x, probabilidades, n, N, K, p=None, x_destacado=None):
         """Crea el gráfico de distribución hipergeométrica"""
         if self.grafico:
-            p = K / N if N > 0 else 0
-            self.grafico.crear_grafico_hipergeometrica(valores_x, probabilidades, n, N, K, p)
+            if p is None:
+                p = K / N if N > 0 else 0
+            self.grafico.crear_grafico_hipergeometrica(valores_x, probabilidades, n, N, K, p, x_destacado)
