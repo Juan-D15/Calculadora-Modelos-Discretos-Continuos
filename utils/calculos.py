@@ -299,3 +299,237 @@ def calcular_curtosis(n, p, N=None):
     else:
         return curtosis, "Mesocúrtica (Campana de Gauss)"
 
+
+def cumple_condicion_hipergeometrica(n, N):
+    """
+    Determina si se puede usar distribución hipergeométrica
+    La condición es que la muestra sea >= 20% de la población
+    
+    Args:
+        n (int): Tamaño de la muestra
+        N (int): Tamaño de la población
+        
+    Returns:
+        tuple: (cumple: bool, porcentaje: float)
+    """
+    if N is None or N <= 0:
+        return False, 0.0
+    porcentaje = (n / N) * 100
+    return porcentaje >= 20, porcentaje
+
+
+def hipergeometrica_pmf(k, n, N, K):
+    """
+    Calcula P(X=k) para una distribución hipergeométrica
+    
+    Fórmula: P(X=k) = C(K,k) × C(N-K, n-k) / C(N, n)
+    
+    Args:
+        k (int): Número de éxitos en la muestra
+        n (int): Tamaño de la muestra
+        N (int): Tamaño de la población
+        K (int): Número de éxitos en la población
+        
+    Returns:
+        float: Probabilidad P(X=k)
+    """
+    if k < 0 or k > n or k > K or (n - k) > (N - K):
+        return 0.0
+    
+    numerador = combinatoria(K, k) * combinatoria(N - K, n - k)
+    denominador = combinatoria(N, n)
+    
+    if denominador == 0:
+        return 0.0
+    
+    return numerador / denominador
+
+
+def calcular_media_hipergeometrica(n, N, K):
+    """
+    Calcula la media de la distribución hipergeométrica
+    
+    Fórmula: μ = n × K / N
+    
+    Args:
+        n (int): Tamaño de la muestra
+        N (int): Tamaño de la población
+        K (int): Número de éxitos en la población
+        
+    Returns:
+        float: Media de la distribución
+    """
+    if N == 0:
+        return 0.0
+    return n * K / N
+
+
+def calcular_desviacion_hipergeometrica(n, N, K):
+    """
+    Calcula la desviación estándar de la distribución hipergeométrica
+    
+    Fórmula: σ = √(n × (K/N) × ((N-K)/N) × ((N-n)/(N-1)))
+    
+    Args:
+        n (int): Tamaño de la muestra
+        N (int): Tamaño de la población
+        K (int): Número de éxitos en la población
+        
+    Returns:
+        float: Desviación estándar
+    """
+    if N <= 1:
+        return 0.0
+    
+    p = K / N
+    q = (N - K) / N
+    fpc = (N - n) / (N - 1)
+    
+    varianza = n * p * q * fpc
+    return math.sqrt(varianza)
+
+
+def calcular_sesgo_hipergeometrica(n, N, K):
+    """
+    Calcula el sesgo (asimetría) de la distribución hipergeométrica
+    
+    Fórmula: γ₁ = (N - 2K) × (N - 1)^½ × (N - 2n) / 
+             [n × K × (N - K) × (N - n)]^½ × (N - 2)
+    
+    Args:
+        n (int): Tamaño de la muestra
+        N (int): Tamaño de la población
+        K (int): Número de éxitos en la población
+        
+    Returns:
+        tuple: (sesgo: float, interpretacion: str, tipo_sesgo_media_mediana: str)
+    """
+    if N <= 2 or K <= 0 or (N - K) <= 0 or n <= 0 or (N - n) <= 0:
+        return 0, "Neutro", "Nulo"
+    
+    numerador = (N - 2 * K) * math.sqrt(N - 1) * (N - 2 * n)
+    denominador = math.sqrt(n * K * (N - K) * (N - n)) * (N - 2)
+    
+    if denominador == 0:
+        return 0, "Neutro", "Nulo"
+    
+    sesgo = numerador / denominador
+    
+    if sesgo > 0.01:
+        return sesgo, "Positivo (Asimetría a la derecha)", "Positivo"
+    elif sesgo < -0.01:
+        return sesgo, "Negativo (Asimetría a la izquierda)", "Negativo"
+    else:
+        return sesgo, "Neutro (Simétrica)", "Nulo"
+
+
+def calcular_curtosis_hipergeometrica(n, N, K):
+    """
+    Calcula la curtosis de la distribución hipergeométrica
+    
+    Fórmula simplificada para exceso de curtosis
+    
+    Args:
+        n (int): Tamaño de la muestra
+        N (int): Tamaño de la población
+        K (int): Número de éxitos en la población
+        
+    Returns:
+        tuple: (curtosis: float, interpretacion: str)
+    """
+    if N <= 3 or K <= 0 or (N - K) <= 0 or n <= 0 or (N - n) <= 0:
+        return 0, "Mesocúrtica"
+    
+    p = K / N
+    q = 1 - p
+    
+    varianza = n * p * q * (N - n) / (N - 1)
+    
+    if varianza == 0:
+        return 0, "Mesocúrtica"
+    
+    numerador = (N - 1) * (N * (N + 1) - 6 * N * (N - n) * p * q + 
+                          6 * n * (N - n) * (N - 2) * (N - 3) * p * p * q * q)
+    denominador = n * (N - n) * (N - 2) * (N - 3) * p * q * varianza
+    
+    if denominador == 0:
+        return 0, "Mesocúrtica"
+    
+    curtosis = numerador / denominador - 3
+    
+    if curtosis > 0.1:
+        return curtosis, "Leptocúrtica (Curva elevada)"
+    elif curtosis < -0.1:
+        return curtosis, "Platicúrtica (Curva aplanada)"
+    else:
+        return curtosis, "Mesocúrtica (Campana de Gauss)"
+
+
+def calcular_probabilidades_hipergeometrica(valores_x, n, N, K):
+    """
+    Calcula las probabilidades para múltiples valores de X en hipergeométrica
+    
+    Args:
+        valores_x (list): Lista de valores para los cuales calcular P(X=x)
+        n (int): Tamaño de la muestra
+        N (int): Tamaño de la población
+        K (int): Número de éxitos en la población
+        
+    Returns:
+        list: Lista de probabilidades correspondientes a cada valor de X
+    """
+    probabilidades = []
+    for x in valores_x:
+        prob = hipergeometrica_pmf(x, n, N, K)
+        probabilidades.append(prob)
+    return probabilidades
+
+
+def calcular_mediana_hipergeometrica(n, N, K):
+    """
+    Calcula una aproximación de la mediana de la distribución hipergeométrica
+    La mediana es el valor donde P(X ≤ m) ≥ 0.5
+    
+    Args:
+        n (int): Tamaño de la muestra
+        N (int): Tamaño de la población
+        K (int): Número de éxitos en la población
+        
+    Returns:
+        int: Mediana aproximada
+    """
+    max_k = min(n, K)
+    prob_acumulada = 0
+    
+    for k in range(0, max_k + 1):
+        prob_acumulada += hipergeometrica_pmf(k, n, N, K)
+        if prob_acumulada >= 0.5:
+            return k
+    
+    return max_k
+
+
+def determinar_tipo_sesgo(media, mediana):
+    """
+    Determina el tipo de sesgo comparando media y mediana
+    
+    - Sesgo negativo: media < mediana
+    - Sesgo nulo: media = mediana
+    - Sesgo positivo: media > mediana
+    
+    Args:
+        media (float): Valor de la media
+        mediana (int): Valor de la mediana
+        
+    Returns:
+        str: Descripción del tipo de sesgo
+    """
+    diferencia = media - mediana
+    
+    if abs(diferencia) < 0.001:
+        return "Nulo (media = mediana)"
+    elif diferencia < 0:
+        return "Negativo (media < mediana)"
+    else:
+        return "Positivo (media > mediana)"
+

@@ -19,6 +19,25 @@ from utils import (
     calcular_sesgo,
     calcular_curtosis
 )
+from utils.calculos import (
+    cumple_condicion_hipergeometrica,
+    calcular_media_hipergeometrica,
+    calcular_desviacion_hipergeometrica,
+    calcular_sesgo_hipergeometrica,
+    calcular_curtosis_hipergeometrica,
+    calcular_probabilidades_hipergeometrica,
+    calcular_mediana_hipergeometrica,
+    determinar_tipo_sesgo
+)
+from utils.validaciones import (
+    validar_parametros_hipergeometrica,
+    validar_valores_x_hipergeometrica,
+    parsear_valores_x_hipergeometrica
+)
+from utils.formato import (
+    generar_texto_resultados_hipergeometrica,
+    generar_mensaje_usar_binomial
+)
 
 
 class VentanaPrincipal:
@@ -111,8 +130,13 @@ class VentanaPrincipal:
             # Convertir a tipos apropiados
             n = int(valores['n'])
             p = float(valores['p'])
-            n_poblacion_str = valores.get('n_poblacion', '').strip()
-            N = int(n_poblacion_str) if n_poblacion_str else None
+            n_poblacion_val = valores.get('n_poblacion', None)
+            
+            # Si N está vacío, es None o es 0, se trata como población infinita (None)
+            if n_poblacion_val is None or n_poblacion_val == '' or n_poblacion_val == '0':
+                N = None
+            else:
+                N = int(n_poblacion_val)
             
             # Validar parámetros
             valido, mensaje = validar_parametros(n, p, N)
@@ -159,6 +183,68 @@ class VentanaPrincipal:
             
             # Crear gráfico
             self.dashboard.crear_grafico(valores_x, probabilidades, n, p, N, es_infinita)
+            
+        except ValueError as e:
+            messagebox.showerror(
+                "Error de Entrada",
+                f"Por favor ingrese valores numéricos válidos.\n\nDetalle: {str(e)}"
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Error Inesperado",
+                f"Ocurrió un error al procesar los datos:\n\n{str(e)}"
+            )
+    
+    def calcular_hipergeometrica(self):
+        """Procesa los datos y realiza los cálculos de distribución hipergeométrica"""
+        try:
+            valores = self.dashboard.obtener_campos_hipergeometrica()
+            
+            if not valores:
+                return
+            
+            N = int(valores['N'])
+            K = int(valores['K'])
+            n = int(valores['n'])
+            
+            valido, mensaje = validar_parametros_hipergeometrica(n, N, K)
+            if not valido:
+                messagebox.showerror("Error de Validación", mensaje)
+                return
+            
+            cumple, porcentaje = cumple_condicion_hipergeometrica(n, N)
+            
+            if not cumple:
+                mensaje = generar_mensaje_usar_binomial(n, N, K, porcentaje)
+                self.dashboard.mostrar_resultados(mensaje)
+                return
+            
+            valores_x = parsear_valores_x_hipergeometrica(valores['x'], n, K)
+            
+            valido, mensaje = validar_valores_x_hipergeometrica(valores_x, n, K)
+            if not valido:
+                messagebox.showerror("Error de Validación", mensaje)
+                return
+            
+            probabilidades = calcular_probabilidades_hipergeometrica(valores_x, n, N, K)
+            media = calcular_media_hipergeometrica(n, N, K)
+            desviacion = calcular_desviacion_hipergeometrica(n, N, K)
+            mediana = calcular_mediana_hipergeometrica(n, N, K)
+            
+            sesgo, interpretacion_sesgo, tipo_sesgo_formula = calcular_sesgo_hipergeometrica(n, N, K)
+            tipo_sesgo_media_mediana = determinar_tipo_sesgo(media, mediana)
+            curtosis, interpretacion_curtosis = calcular_curtosis_hipergeometrica(n, N, K)
+            
+            texto_resultados = generar_texto_resultados_hipergeometrica(
+                n, N, K, valores_x, probabilidades,
+                media, desviacion,
+                sesgo, interpretacion_sesgo, tipo_sesgo_media_mediana,
+                curtosis, interpretacion_curtosis,
+                mediana, cumple, porcentaje
+            )
+            
+            self.dashboard.mostrar_resultados(texto_resultados)
+            self.dashboard.crear_grafico_hipergeometrica(valores_x, probabilidades, n, N, K)
             
         except ValueError as e:
             messagebox.showerror(
