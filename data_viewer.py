@@ -282,7 +282,7 @@ class DataViewerWindow(BaseToplevelWindow):
                 self._mostrar_datos_tabla()
                 self._actualizar_combo_columnas()
                 
-                nombre_archivo = self.loader.ultima_ruta.split('/')[-1].split('\\')[-1]
+                nombre_archivo = self.loader.obtener_nombre_archivo()
                 self.lbl_archivo.configure(
                     text=f"Archivo: {nombre_archivo} ({len(self.df)} filas, {len(self.df.columns)} columnas)"
                 )

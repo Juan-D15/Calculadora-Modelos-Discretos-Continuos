@@ -336,12 +336,15 @@ class ResultsWindow(BaseToplevelWindow):
         self.figura.patch.set_facecolor('#2b2b2b')
         ax.set_facecolor('#2b2b2b')
         
+        modelo = self.resultados['modelo']
+        color_normal = '#9b59b6' if modelo == "Hipergeométrica" else '#3b8ed0'
+        
         colores = []
         for xi in valores_x:
             if xi == self.x:
                 colores.append('#e74c3c')
             else:
-                colores.append('#3b8ed0')
+                colores.append(color_normal)
         
         bars = ax.bar(
             valores_x,
@@ -349,7 +352,8 @@ class ResultsWindow(BaseToplevelWindow):
             color=colores,
             alpha=0.8,
             edgecolor='white',
-            linewidth=0.5
+            linewidth=0.5,
+            label=f'Distribución {modelo}'
         )
         
         if len(valores_x) > 1:
@@ -379,14 +383,15 @@ class ResultsWindow(BaseToplevelWindow):
             if max(y_normal) > 0:
                 y_normal = y_normal * (max_prob / max(y_normal))
             
+            color_normal_ref = '#3498db' if modelo == "Hipergeométrica" else '#9b59b6'
             ax.plot(
                 x_normal,
                 y_normal,
-                color='#9b59b6',
+                color=color_normal_ref,
                 linewidth=2,
                 linestyle='--',
                 alpha=0.8,
-                label='Curva Normal (Curtosis ref.)'
+                label='Curva Normal (referencia)'
             )
         
         for i, (xi, prob) in enumerate(zip(valores_x, valores_prob)):
