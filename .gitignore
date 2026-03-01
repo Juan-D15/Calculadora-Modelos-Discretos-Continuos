@@ -56,9 +56,6 @@ node_modules/
 # --- Tailwind ---
 /static/css/output.css
 
-# Markdown
-*.md
-
 # Agents
 .agents/
 skills-lock.json
