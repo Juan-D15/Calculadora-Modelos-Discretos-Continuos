@@ -143,8 +143,12 @@ class Dashboard:
 
         self.actualizar_botones_sidebar(distribucion)
 
-        for widget in self.content_frame.winfo_children():
-            widget.destroy()
+        try:
+            if self.content_frame is not None and self.content_frame.winfo_exists():
+                for widget in self.content_frame.winfo_children():
+                    widget.destroy()
+        except Exception:
+            pass
 
         if distribucion == "binomial":
             self.crear_interfaz_binomial()

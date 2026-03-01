@@ -29,8 +29,12 @@ class GraficoBinomial:
 
     def limpiar(self):
         """Limpia el gráfico actual y cierra la figura de matplotlib"""
-        for widget in self.frame.winfo_children():
-            widget.destroy()
+        try:
+            if self.frame is not None and self.frame.winfo_exists():
+                for widget in self.frame.winfo_children():
+                    widget.destroy()
+        except Exception:
+            pass
 
         if self.figura is not None:
             try:
@@ -586,9 +590,13 @@ class GraficoBinomial:
 
         plt.tight_layout()
 
-        for widget in self.frame.winfo_children():
-            if widget != self.toggle_frame:
-                widget.destroy()
+        try:
+            if self.frame is not None and self.frame.winfo_exists():
+                for widget in self.frame.winfo_children():
+                    if widget != self.toggle_frame:
+                        widget.destroy()
+        except Exception:
+            pass
 
         self.canvas = FigureCanvasTkAgg(self.figura, master=self.frame)
         self.canvas.draw()
@@ -728,9 +736,13 @@ class GraficoBinomial:
 
         plt.tight_layout()
 
-        for widget in self.frame.winfo_children():
-            if widget != self.toggle_frame:
-                widget.destroy()
+        try:
+            if self.frame is not None and self.frame.winfo_exists():
+                for widget in self.frame.winfo_children():
+                    if widget != self.toggle_frame:
+                        widget.destroy()
+        except Exception:
+            pass
 
         self.canvas = FigureCanvasTkAgg(self.figura, master=self.frame)
         self.canvas.draw()
