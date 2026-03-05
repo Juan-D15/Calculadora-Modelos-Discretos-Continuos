@@ -610,3 +610,104 @@ def buscar_valor_tolerancia(valores_x, probabilidades_acumuladas, tolerancia):
     idx_min = np.argmin(diferencias)
 
     return int(valores_validos[idx_min])
+
+
+def poisson_pmf(k: int, lam: float) -> float:
+    """
+    Calcula P(X=k) para una distribución de Poisson
+
+    Fórmula: P(X=k) = (e^(-λ) × λ^k) / k!
+
+    Args:
+        k (int): Número de eventos/éxitos
+        lam (float): Parámetro λ (media = n × p)
+
+    Returns:
+        float: Probabilidad de exactamente k eventos
+    """
+    return (math.exp(-lam) * (lam**k)) / math.factorial(k)
+
+
+def calcular_media_poisson(n: int, p: float) -> float:
+    """
+    Calcula la media (λ) de la distribución de Poisson
+
+    Fórmula: λ = n × p
+
+    Args:
+        n (int): Número de ensayos
+        p (float): Probabilidad de éxito
+
+    Returns:
+        float: Media λ
+    """
+    return n * p
+
+
+def calcular_desviacion_poisson(lam: float) -> float:
+    """
+    Calcula la desviación estándar de la distribución de Poisson
+
+    Fórmula: σ = √λ
+
+    Args:
+        lam (float): Parámetro λ (media)
+
+    Returns:
+        float: Desviación estándar
+    """
+    return math.sqrt(lam)
+
+
+def calcular_curtosis_poisson(lam: float) -> tuple[float, str]:
+    """
+    Calcula la curtosis de la distribución de Poisson
+
+    Fórmula: Curtosis = 1 / λ
+
+    Args:
+        lam (float): Parámetro λ (media)
+
+    Returns:
+        tuple: (curtosis, interpretación)
+    """
+    if lam <= 0:
+        return 0, "No definida"
+
+    curtosis = 1 / lam
+
+    return curtosis, "Leptocúrtica"
+
+
+def calcular_sesgo_poisson(lam: float) -> tuple[float, str]:
+    """
+    Calcula el sesgo de la distribución de Poisson
+
+    Fórmula: Sesgo = 1 / √λ
+
+    Args:
+        lam (float): Parámetro λ (media)
+
+    Returns:
+        tuple: (sesgo, interpretación)
+    """
+    if lam <= 0:
+        return 0, "No definido"
+
+    sesgo = 1 / math.sqrt(lam)
+
+    return sesgo, "Sesgo positivo: Media > Mediana"
+
+
+def calcular_probabilidades_poisson(valores_x: list[int], lam: float) -> list[float]:
+    """
+    Calcula las probabilidades para múltiples valores de X en Poisson
+
+    Args:
+        valores_x (list): Lista de valores para los cuales calcular P(X=x)
+        lam (float): Parámetro λ (media)
+
+    Returns:
+        list: Lista de probabilidades correspondientes a cada valor de X
+    """
+    return [poisson_pmf(x, lam) for x in valores_x]
