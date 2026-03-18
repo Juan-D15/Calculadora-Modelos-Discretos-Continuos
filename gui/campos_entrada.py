@@ -25,6 +25,7 @@ class CamposEntrada:
         self.tolerancia_entry = None
         self.frame_comparacion = None
         self.K_entry = None
+        self.chk_poisson = None
 
         self.crear_campos()
 
@@ -78,6 +79,14 @@ class CamposEntrada:
         )
         self.checkbox_comparacion.pack(side="left", padx=15)
 
+        self.chk_poisson = ctk.CTkCheckBox(
+            row2,
+            text="Activar aproximación Poisson",
+            font=ctk.CTkFont(size=12),
+            command=self.on_poisson_toggle,
+        )
+        self.chk_poisson.pack(side="left", padx=10)
+
         self.frame_comparacion = ctk.CTkFrame(self.frame, fg_color="transparent")
 
         tolerancia_frame = ctk.CTkFrame(self.frame_comparacion, fg_color="transparent")
@@ -116,6 +125,15 @@ class CamposEntrada:
             self.frame_comparacion.pack(fill="x", pady=4)
         else:
             self.frame_comparacion.pack_forget()
+
+    def on_poisson_toggle(self):
+        """
+        Callback cuando cambia el checkbox de aproximación Poisson
+        Recalcula si hay datos válidos en el dashboard
+        """
+        if self.frame and hasattr(self.frame, "ventana_principal"):
+            # Recalculará a través de ventana_principal
+            pass
 
     def es_comparacion_activa(self):
         """
@@ -184,6 +202,7 @@ class CamposEntradaHipergeometrica:
         self.K_entry = None
         self.n_entry = None
         self.x_entry = None
+        self.chk_poisson = None
 
         self.crear_campos()
 
@@ -227,6 +246,23 @@ class CamposEntradaHipergeometrica:
         )
         self.x_entry.pack(side="left", padx=8)
 
+        self.chk_poisson = ctk.CTkCheckBox(
+            row2,
+            text="Activar aproximación Poisson",
+            font=ctk.CTkFont(size=12),
+            command=self.on_poisson_toggle,
+        )
+        self.chk_poisson.pack(side="left", padx=10)
+
+    def on_poisson_toggle(self):
+        """
+        Callback cuando cambia el checkbox de aproximación Poisson
+        Recalcula si hay datos válidos en el dashboard
+        """
+        if self.frame and hasattr(self.frame, "ventana_principal"):
+            # Recalculará a través de ventana_principal
+            pass
+
     def obtener_valores(self):
         """
         Obtiene los valores de todos los campos
@@ -246,4 +282,90 @@ class CamposEntradaHipergeometrica:
         self.N_entry.delete(0, "end")
         self.K_entry.delete(0, "end")
         self.n_entry.delete(0, "end")
+        self.x_entry.delete(0, "end")
+
+
+class CamposEntradaPoisson:
+    """Clase para gestionar los campos de entrada de distribución Poisson"""
+
+    def __init__(self, frame_contenedor):
+        """
+        Inicializa los campos de entrada para Poisson
+
+        Args:
+            frame_contenedor: Frame donde se colocarán los campos
+        """
+        self.frame = frame_contenedor
+        self.n_entry = None
+        self.p_entry = None
+        self.x_entry = None
+
+        self.crear_campos()
+
+    def crear_campos(self):
+        """Crea todos los campos de entrada para Poisson"""
+        row1 = ctk.CTkFrame(self.frame, fg_color="transparent")
+        row1.pack(fill="x", pady=4)
+
+        ctk.CTkLabel(
+            row1, text="Número de ensayos (n):", font=ctk.CTkFont(size=13)
+        ).pack(side="left", padx=8)
+
+        self.n_entry = ctk.CTkEntry(row1, width=120, placeholder_text="Ej: 100")
+        self.n_entry.pack(side="left", padx=8)
+
+        ctk.CTkLabel(
+            row1, text="Probabilidad de éxito (p):", font=ctk.CTkFont(size=13)
+        ).pack(side="left", padx=8)
+
+        self.p_entry = ctk.CTkEntry(row1, width=120, placeholder_text="Ej: 0.05 o 5")
+        self.p_entry.pack(side="left", padx=8)
+
+        info_label = ctk.CTkLabel(
+            row1,
+            text="(acepta: 0.05 o 5 para 5%)",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        info_label.pack(side="left", padx=8)
+
+        row2 = ctk.CTkFrame(self.frame, fg_color="transparent")
+        row2.pack(fill="x", pady=4)
+
+        ctk.CTkLabel(
+            row2, text="Valores de X (separados por coma):", font=ctk.CTkFont(size=13)
+        ).pack(side="left", padx=8)
+
+        self.x_entry = ctk.CTkEntry(
+            row2,
+            width=380,
+            placeholder_text="Ej: 0,1,2,3 o 'todos' (vacío=0 a n)",
+        )
+        self.x_entry.pack(side="left", padx=8)
+
+        condiciones_label = ctk.CTkLabel(
+            row2,
+            text="Condiciones: p < 0.10 y λ < 10",
+            font=ctk.CTkFont(size=10),
+            text_color="#3b8ed0",
+        )
+        condiciones_label.pack(side="left", padx=15)
+
+    def obtener_valores(self):
+        """
+        Obtiene los valores de todos los campos
+
+        Returns:
+            dict: Diccionario con los valores de entrada
+        """
+        return {
+            "n": self.n_entry.get().strip(),
+            "p": self.p_entry.get().strip(),
+            "x": self.x_entry.get().strip(),
+        }
+
+    def limpiar(self):
+        """Limpia todos los campos de entrada"""
+        self.n_entry.delete(0, "end")
+        self.p_entry.delete(0, "end")
         self.x_entry.delete(0, "end")
