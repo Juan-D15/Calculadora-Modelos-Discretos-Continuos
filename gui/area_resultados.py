@@ -580,3 +580,250 @@ class AreaResultados:
         lbl_espacio.pack(pady=(5, 0))
 
         return row + 1
+
+    def mostrar_resultados_poisson(self, datos):
+        """
+        Muestra resultados de distribución de Poisson con diseño visual
+
+        Args:
+            datos (dict): Diccionario con los datos:
+                - n: número de ensayos
+                - p: probabilidad de éxito
+                - lambda: parámetro λ
+                - valores_x: lista de valores X
+                - probabilidades: lista de probabilidades
+                - media: media (λ)
+                - desviacion: desviación estándar
+                - sesgo: valor del sesgo
+                - interpretacion_sesgo: descripción del sesgo
+                - curtosis: valor de curtosis
+                - interpretacion_curtosis: descripción de curtosis
+        """
+        self.limpiar()
+        self.resultados_data = datos
+
+        row = 0
+
+        titulo = ctk.CTkLabel(
+            self.scrollable_frame,
+            text="RESULTADOS",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=("#27ae60", "#27ae60"),
+        )
+        titulo.grid(row=row, column=0, pady=(10, 15), sticky="ew")
+        row += 1
+
+        row = self._crear_seccion_condiciones_poisson(row, datos)
+        row = self._crear_seccion_parametros_poisson(row, datos)
+        row = self._crear_seccion_probabilidades(row, datos)
+        row = self._crear_seccion_estadisticas(row, datos)
+        row = self._crear_seccion_forma(row, datos)
+
+    def _crear_seccion_condiciones_poisson(self, row, datos):
+        """Crea la sección de condiciones de Poisson"""
+        frame = ctk.CTkFrame(self.scrollable_frame)
+        frame.grid(row=row, column=0, sticky="ew", pady=(0, 10), padx=5)
+
+        lbl_titulo = ctk.CTkLabel(
+            frame,
+            text="APROXIMACIÓN DE POISSON",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            anchor="w",
+        )
+        lbl_titulo.pack(fill="x", padx=10, pady=(10, 5))
+
+        p = datos.get("p", 0)
+        lam = datos.get("lambda", 0)
+
+        cond_p = p < 0.10
+        cond_lam = lam < 10
+
+        frame_cond = ctk.CTkFrame(frame, fg_color="transparent")
+        frame_cond.pack(fill="x", padx=10, pady=2)
+
+        lbl_cond1 = ctk.CTkLabel(
+            frame_cond,
+            text=f"• p < 0.10: {p:.4f} {'✓' if cond_p else '✗'}",
+            font=ctk.CTkFont(size=11),
+            text_color="#2ecc71" if cond_p else "#e74c3c",
+            anchor="w",
+        )
+        lbl_cond1.pack(anchor="w")
+
+        lbl_cond2 = ctk.CTkLabel(
+            frame_cond,
+            text=f"• λ < 10: {lam:.2f} {'✓' if cond_lam else '✗'}",
+            font=ctk.CTkFont(size=11),
+            text_color="#2ecc71" if cond_lam else "#e74c3c",
+            anchor="w",
+        )
+        lbl_cond2.pack(anchor="w")
+
+        lbl_valido = ctk.CTkLabel(
+            frame,
+            text="Válido para aproximación de Poisson"
+            if (cond_p and cond_lam)
+            else "Condiciones no cumplidas",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color="#27ae60" if (cond_p and cond_lam) else "#e74c3c",
+            anchor="w",
+        )
+        lbl_valido.pack(fill="x", padx=10, pady=(5, 10))
+
+        return row + 1
+
+    def _crear_seccion_parametros_poisson(self, row, datos):
+        """Crea la sección de parámetros Poisson"""
+        frame = ctk.CTkFrame(self.scrollable_frame)
+        frame.grid(row=row, column=0, sticky="ew", pady=(0, 10), padx=5)
+
+        lbl_titulo = ctk.CTkLabel(
+            frame,
+            text="PARÁMETROS",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            anchor="w",
+        )
+        lbl_titulo.pack(fill="x", padx=10, pady=(10, 5))
+
+        params = [
+            ("Número de ensayos (n):", str(datos.get("n", "--"))),
+            ("Probabilidad de éxito (p):", f"{datos.get('p', 0):.6f}"),
+            ("Parámetro λ (media):", f"{datos.get('lambda', 0):.6f}"),
+        ]
+
+        for label, valor in params:
+            frame_param = ctk.CTkFrame(frame, fg_color="transparent")
+            frame_param.pack(fill="x", padx=10, pady=2)
+
+            lbl = ctk.CTkLabel(
+                frame_param,
+                text=label,
+                font=ctk.CTkFont(size=11),
+                width=180,
+                anchor="w",
+            )
+            lbl.pack(side="left")
+
+            val = ctk.CTkLabel(
+                frame_param,
+                text=valor,
+                font=ctk.CTkFont(size=11, weight="bold"),
+                anchor="w",
+            )
+            val.pack(side="left", padx=5)
+
+        lbl_espacio = ctk.CTkLabel(frame, text="")
+        lbl_espacio.pack(pady=(5, 0))
+
+        return row + 1
+
+    def mostrar_estadisticas_poisson(self, datos):
+        """
+        Muestra estadísticas de aproximación de Poisson
+
+        Args:
+            datos (dict): Diccionario con λ, media, varianza, desviación, etc.
+        """
+        # Frame para estadísticas
+        frame_stats = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        frame_stats.pack(fill="x", padx=5, pady=5)
+
+        # Título
+        titulo = ctk.CTkLabel(
+            frame_stats,
+            text="ESTADÍSTICAS DE APROXIMACIÓN DE POISSON",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=("#1f6aa5", "#1f6aa5")
+        )
+        titulo.pack(pady=5)
+
+        # Valor λ
+        lam_texto = ctk.CTkLabel(
+            frame_stats,
+            text=f"λ = {datos['lambda']:.4f}",
+            font=ctk.CTkFont(size=11)
+        )
+        lam_texto.pack(pady=2)
+
+        # Media
+        media_texto = ctk.CTkLabel(
+            frame_stats,
+            text=f"Media (μ) = {datos['media']:.4f}",
+            font=ctk.CTkFont(size=11)
+        )
+        media_texto.pack(pady=2)
+
+        # Varianza
+        var_texto = ctk.CTkLabel(
+            frame_stats,
+            text=f"Varianza (σ²) = {datos['varianza']:.4f}",
+            font=ctk.CTkFont(size=11)
+        )
+        var_texto.pack(pady=2)
+
+        # Desviación estándar
+        desv_texto = ctk.CTkLabel(
+            frame_stats,
+            text=f"Desviación estándar (σ) = {datos['desviacion']:.4f}",
+            font=ctk.CTkFont(size=11)
+        )
+        desv_texto.pack(pady=2)
+
+        # Mostrar P(X=k) para k ingresado
+        if datos.get('k_ingresado') is not None:
+            k = datos['k_ingresado']
+            separator = ctk.CTkFrame(frame_stats, height=2, fg_color="gray50")
+            separator.pack(fill="x", padx=10, pady=10)
+
+            prob_label = ctk.CTkLabel(
+                frame_stats,
+                text=f"P(X={k}):",
+                font=ctk.CTkFont(size=11, weight="bold")
+            )
+            prob_label.pack(pady=5)
+
+            if 'probs_binom' in datos:
+                if k in datos['valores_k']:
+                    idx = datos['valores_k'].index(k)
+                    prob_binom = datos['probs_binom'][idx]
+                    prob_poisson = datos['probs_poisson'][idx]
+                else:
+                    prob_binom = 0.0
+                    prob_poisson = 0.0
+
+                binom_text = ctk.CTkLabel(
+                    frame_stats,
+                    text=f"  Original: {prob_binom:.6f}",
+                    font=ctk.CTkFont(size=10)
+                )
+                binom_text.pack(pady=2)
+
+                poisson_text = ctk.CTkLabel(
+                    frame_stats,
+                    text=f"  Poisson:  {prob_poisson:.6f}",
+                    font=ctk.CTkFont(size=10)
+                )
+                poisson_text.pack(pady=2)
+
+            elif 'probs_hiper' in datos:
+                if k in datos['valores_k']:
+                    idx = datos['valores_k'].index(k)
+                    prob_hiper = datos['probs_hiper'][idx]
+                    prob_poisson = datos['probs_poisson'][idx]
+                else:
+                    prob_hiper = 0.0
+                    prob_poisson = 0.0
+
+                hiper_text = ctk.CTkLabel(
+                    frame_stats,
+                    text=f"  Original: {prob_hiper:.6f}",
+                    font=ctk.CTkFont(size=10)
+                )
+                hiper_text.pack(pady=2)
+
+                poisson_text = ctk.CTkLabel(
+                    frame_stats,
+                    text=f"  Poisson:  {prob_poisson:.6f}",
+                    font=ctk.CTkFont(size=10)
+                )
+                poisson_text.pack(pady=2)
