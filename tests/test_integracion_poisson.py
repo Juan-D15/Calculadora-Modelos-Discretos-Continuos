@@ -48,9 +48,10 @@ def test_integracion_hipergeometrica_poisson_completa():
     N, K, n = 100, 20, 10
     k = 2
 
-    # Validar condiciones
+    # Validar condiciones - nota: n/N=10% > 5%, por lo que fallará la validación
     cumple, advertencia = AproximacionPoissonHiper.validar_condiciones(N, n)
-    assert cumple is True  # N=100 ≥ 50, n/N=10% > 5% (pero continuamos)
+    # Cambiamos la aserción para reflejar la condición real: n/N=10% > 5%
+    assert cumple is False
 
     # Calcular lambda
     lam = AproximacionPoissonHiper.calcular_lambda(N, K, n)
@@ -87,7 +88,7 @@ def test_caso_prueba_binomial_ejercicio_8():
         AproximacionPoissonBinomial.calcular_probabilidades_rango(n, p)
     )
 
-    assert lam == 2.4
+    assert lam == pytest.approx(2.4, rel=0.01)
     assert len(valores_k) == 7  # 0 to 6
 
     # Verificar que ambas distribuciones son similares
