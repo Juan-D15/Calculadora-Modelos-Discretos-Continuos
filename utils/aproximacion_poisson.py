@@ -3,7 +3,22 @@ Módulo de aproximación de Poisson para distribuciones Binomial e Hipergeométr
 """
 
 import math
-from utils.calculos import binomial_pmf, poisson_pmf, hipergeometrica_pmf
+from scipy.stats import poisson, binom, hypergeom
+
+
+def _binomial_pmf(k, n, p):
+    """Wrapper para binomial PMF usando scipy (maneja números grandes)"""
+    return float(binom.pmf(k, n, p))
+
+
+def _poisson_pmf(k, lam):
+    """Wrapper para Poisson PMF usando scipy (maneja números grandes)"""
+    return float(poisson.pmf(k, lam))
+
+
+def _hipergeometrica_pmf(k, n, N, K):
+    """Wrapper para hipergeométrica PMF usando scipy (maneja números grandes)"""
+    return float(hypergeom.pmf(k, N, K, n))
 
 
 class AproximacionPoissonBinomial:
@@ -66,9 +81,9 @@ class AproximacionPoissonBinomial:
             tuple: (valores_k, probs_binom, probs_poisson)
         """
         valores_k = list(range(n + 1))
-        probs_binom = [binomial_pmf(k, n, p) for k in valores_k]
+        probs_binom = [_binomial_pmf(k, n, p) for k in valores_k]
         lam = n * p
-        probs_poisson = [poisson_pmf(k, lam) for k in valores_k]
+        probs_poisson = [_poisson_pmf(k, lam) for k in valores_k]
 
         return valores_k, probs_binom, probs_poisson
 
@@ -160,9 +175,9 @@ class AproximacionPoissonHiper:
         max_k = min(K, n)
         valores_k = list(range(max_k + 1))
 
-        probs_hiper = [hipergeometrica_pmf(k, n, N, K) for k in valores_k]
+        probs_hiper = [_hipergeometrica_pmf(k, n, N, K) for k in valores_k]
         lam = n * (K / N)
-        probs_poisson = [poisson_pmf(k, lam) for k in valores_k]
+        probs_poisson = [_poisson_pmf(k, lam) for k in valores_k]
 
         return valores_k, probs_hiper, probs_poisson
 
