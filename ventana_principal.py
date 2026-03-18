@@ -22,6 +22,13 @@ from utils import (
     buscar_valor_tolerancia,
     validar_parametros_comparacion,
     validar_tolerancia,
+    validar_condiciones_poisson,
+    parsear_valores_x_poisson,
+    calcular_probabilidades_poisson,
+    calcular_desviacion_poisson,
+    calcular_sesgo_poisson,
+    calcular_curtosis_poisson,
+    validar_valores_x_poisson,
 )
 from utils.calculos import (
     cumple_condicion_hipergeometrica,
@@ -118,6 +125,14 @@ class VentanaPrincipal:
             valores = self.dashboard.obtener_campos()
 
             if not valores:
+                return
+
+            # Check if Poisson approximation is activated
+            if (
+                hasattr(self.dashboard.campos, "chk_poisson")
+                and self.dashboard.campos.chk_poisson.get()
+            ):
+                self.calcular_poisson_binomial()
                 return
 
             n = int(valores["n"])
@@ -380,6 +395,99 @@ class VentanaPrincipal:
                 f"Ocurrió un error al procesar los datos:\n\n{str(e)}",
             )
 
+    def calcular_poisson(self):
+        """Procesa los datos y realiza los cálculos de distribución de Poisson"""
+        try:
+            valores = self.dashboard.obtener_campos_poisson()
+
+            if not valores:
+                return
+
+            n_str = valores.get("n", "").strip()
+            p_str = valores.get("p", "").strip()
+            x_str = valores.get("x", "").strip()
+
+            if not n_str:
+                messagebox.showerror(
+                    "Error de Validación",
+                    "El número de ensayos (n) es obligatorio",
+                )
+                return
+
+            if not p_str:
+                messagebox.showerror(
+                    "Error de Validación",
+                    "La probabilidad (p) es obligatoria",
+                )
+                return
+
+            n = int(n_str)
+
+            if n <= 0:
+                messagebox.showerror(
+                    "Error de Validación",
+                    "El número de ensayos (n) debe ser mayor a 0",
+                )
+                return
+
+            valido, p, error = normalizar_probabilidad(p_str)
+            if not valido:
+                messagebox.showerror("Error de Validación", error)
+                return
+
+            valido, mensaje, lam = validar_condiciones_poisson(n, p)
+            if not valido:
+                messagebox.showerror(
+                    "Condiciones No Cumplidas",
+                    mensaje,
+                )
+                return
+
+            valores_x = parsear_valores_x_poisson(x_str, lam, n)
+
+            valido, mensaje = validar_valores_x_poisson(valores_x, n)
+            if not valido:
+                messagebox.showerror("Error de Validación", mensaje)
+                return
+
+            probabilidades = calcular_probabilidades_poisson(valores_x, lam)
+            media = lam
+            desviacion = calcular_desviacion_poisson(lam)
+            sesgo, interpretacion_sesgo = calcular_sesgo_poisson(lam)
+            curtosis, interpretacion_curtosis = calcular_curtosis_poisson(lam)
+
+            datos_resultados = {
+                "n": n,
+                "p": p,
+                "lambda": lam,
+                "valores_x": valores_x,
+                "probabilidades": probabilidades,
+                "media": media,
+                "desviacion": desviacion,
+                "sesgo": sesgo,
+                "interpretacion_sesgo": interpretacion_sesgo,
+                "curtosis": curtosis,
+                "interpretacion_curtosis": interpretacion_curtosis,
+            }
+
+            self.dashboard.mostrar_resultados_poisson(datos_resultados)
+
+            x_destacado = valores_x[0] if len(valores_x) == 1 else None
+            self.dashboard.crear_grafico_poisson(
+                valores_x, probabilidades, lam, n, p, x_destacado
+            )
+
+        except ValueError as e:
+            messagebox.showerror(
+                "Error de Entrada",
+                f"Por favor ingrese valores numéricos válidos.\n\nDetalle: {str(e)}",
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Error Inesperado",
+                f"Ocurrió un error al procesar los datos:\n\n{str(e)}",
+            )
+
     def abrir_analisis_archivo(self):
         """Abre la ventana de análisis desde archivo."""
         DataViewerWindow(master=self.root)
@@ -512,4 +620,198 @@ class VentanaPrincipal:
             messagebox.showerror(
                 "Error Inesperado",
                 f"Ocurrió un error al procesar la comparación:\n\n{str(e)}",
+            )
+
+    def calcular_poisson_binomial(self):
+        """
+        Calcula aproximación Binomial → Poisson cuando el checkbox está activado
+
+        Valida parámetros, calcula probabilidades para ambas distribuciones,
+        y muestra resultados comparativos en el dashboard.
+        """
+        try:
+            from utils import AproximacionPoissonBinomial
+
+            valores = self.dashboard.obtener_campos()
+
+            if not valores:
+                return
+
+            n = int(valores["n"])
+            p = float(valores["p"])
+            x_str = valores.get("x", "").strip()
+
+            # Parsear k ingresado
+            k_ingresado = int(x_str) if x_str else None
+
+            # Validar parámetros básicos
+            if n <= 0:
+                messagebox.showerror(
+                    "Error de Validación", "El número de ensayos (n) debe ser mayor a 0"
+                )
+                return
+
+            if not (0 < p < 1):
+                messagebox.showerror(
+                    "Error de Validación", "La probabilidad (p) debe estar entre 0 y 1"
+                )
+                return
+
+            if k_ingresado is not None and (k_ingresado < 0 or k_ingresado > n):
+                messagebox.showerror(
+                    "Error de Validación", f"El valor k debe estar entre 0 y {n}"
+                )
+                return
+
+            # Validar condiciones de aproximación
+            cumple, advertencia = AproximacionPoissonBinomial.validar_condiciones(n, p)
+
+            if not cumple:
+                messagebox.showwarning("Advertencia de Aproximación", advertencia)
+
+            # Calcular probabilidades para rango completo
+            valores_k, probs_binom, probs_poisson = (
+                AproximacionPoissonBinomial.calcular_probabilidades_rango(n, p)
+            )
+
+            # Calcular estadísticas
+            lam = AproximacionPoissonBinomial.calcular_lambda(n, p)
+            media, varianza, desviacion = (
+                AproximacionPoissonBinomial.calcular_estadisticas(n, p)
+            )
+
+            # Datos para resultados
+            datos_resultados = {
+                "n": n,
+                "p": p,
+                "lambda": lam,
+                "k_ingresado": k_ingresado,
+                "valores_k": valores_k,
+                "probs_binom": probs_binom,
+                "probs_poisson": probs_poisson,
+                "media": media,
+                "varianza": varianza,
+                "desviacion": desviacion,
+                "advertencia": advertencia if not cumple else None,
+            }
+
+            # Mostrar resultados en dashboard
+            self.dashboard.mostrar_resultados_poisson_binomial(datos_resultados)
+
+            # Crear gráfica comparativa
+            self.dashboard.crear_grafico_poisson_binomial(
+                valores_k, probs_binom, probs_poisson, k_ingresado, n, p, lam
+            )
+
+        except ValueError as e:
+            messagebox.showerror(
+                "Error de Entrada",
+                f"Por favor ingrese valores numéricos válidos.\n\nDetalle: {str(e)}",
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Error Inesperado",
+                f"Ocurrió un error al calcular la aproximación:\n\n{str(e)}",
+            )
+
+    def calcular_poisson_hipergeometrica(self):
+        """
+        Calcula aproximación Hipergeométrica → Poisson cuando el checkbox está activado
+
+        Valida parámetros, calcula probabilidades para ambas distribuciones,
+        y muestra resultados comparativos en el dashboard.
+        """
+        try:
+            from utils import AproximacionPoissonHiper
+
+            valores = self.dashboard.obtener_campos_hipergeometrica()
+
+            if not valores:
+                return
+
+            N = int(valores["N"])
+            K = int(valores["K"])
+            n = int(valores["n"])
+            x_str = valores.get("x", "").strip()
+
+            # Validar parámetros básicos
+            if N <= 0:
+                messagebox.showerror(
+                    "Error de Validación",
+                    "El tamaño de población (N) debe ser mayor a 0",
+                )
+                return
+
+            if K <= 0 or K > N:
+                messagebox.showerror(
+                    "Error de Validación", f"K debe estar entre 1 y N ({N})"
+                )
+                return
+
+            if n <= 0 or n > N:
+                messagebox.showerror(
+                    "Error de Validación", f"n debe estar entre 1 y N ({N})"
+                )
+                return
+
+            k_ingresado = int(x_str) if x_str else None
+
+            if k_ingresado is not None:
+                if k_ingresado < 0 or k_ingresado > min(K, n):
+                    messagebox.showerror(
+                        "Error de Validación",
+                        f"k debe estar entre 0 y min(K, n) = {min(K, n)}",
+                    )
+                    return
+
+            # Validar condiciones de aproximación
+            cumple, advertencia = AproximacionPoissonHiper.validar_condiciones(N, n)
+
+            if not cumple:
+                messagebox.showwarning("Advertencia de Aproximación", advertencia)
+
+            # Calcular probabilidades para rango completo
+            valores_k, probs_hiper, probs_poisson = (
+                AproximacionPoissonHiper.calcular_probabilidades_rango(n, N, K)
+            )
+
+            # Calcular estadísticas
+            lam = AproximacionPoissonHiper.calcular_lambda(N, K, n)
+            media, varianza, desviacion = (
+                AproximacionPoissonHiper.calcular_estadisticas(n, N, K)
+            )
+
+            # Datos para resultados
+            datos_resultados = {
+                "N": N,
+                "K": K,
+                "n": n,
+                "lambda": lam,
+                "k_ingresado": k_ingresado,
+                "valores_k": valores_k,
+                "probs_hiper": probs_hiper,
+                "probs_poisson": probs_poisson,
+                "media": media,
+                "varianza": varianza,
+                "desviacion": desviacion,
+                "advertencia": advertencia if not cumple else None,
+            }
+
+            # Mostrar resultados en dashboard
+            self.dashboard.mostrar_resultados_poisson_hipergeometrica(datos_resultados)
+
+            # Crear gráfica comparativa
+            self.dashboard.crear_grafico_poisson_hipergeometrica(
+                valores_k, probs_hiper, probs_poisson, k_ingresado, N, K, n, lam
+            )
+
+        except ValueError as e:
+            messagebox.showerror(
+                "Error de Entrada",
+                f"Por favor ingrese valores numéricos válidos.\n\nDetalle: {str(e)}",
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Error Inesperado",
+                f"Ocurrió un error al calcular la aproximación:\n\n{str(e)}",
             )
