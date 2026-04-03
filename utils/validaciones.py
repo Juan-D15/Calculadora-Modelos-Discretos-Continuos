@@ -2,6 +2,8 @@
 Módulo de validación de datos de entrada
 """
 
+import math
+
 
 def normalizar_probabilidad(valor):
     """
@@ -258,7 +260,7 @@ def parsear_valores_x_hipergeometrica(texto, n, K):
     Args:
         texto (str): Texto con valores separados por coma, "todos", o un solo número
         n (int): Tamaño de muestra
-        K (int): Número de éxitos en población
+        K (int): Éxitos en población
 
     Returns:
         list: Lista de valores enteros de X
@@ -280,3 +282,92 @@ def parsear_valores_x_hipergeometrica(texto, n, K):
 
     valores_x = [int(x.strip()) for x in texto.split(",")]
     return valores_x
+
+
+def validar_condiciones_poisson(n: int, p: float) -> tuple[bool, str, float]:
+    """
+    Valida que se cumplan las condiciones para usar distribución de Poisson
+    como aproximación de la Binomial:
+    - p < 0.10
+    - λ = n × p < 10
+
+    Args:
+        n (int): Número de ensayos
+        p (float): Probabilidad de éxito (ya normalizada 0-1)
+
+    Returns:
+        tuple: (cumple_condiciones, mensaje_error, lambda)
+    """
+    lam = n * p
+
+    errores = []
+
+    if p >= 0.10:
+        errores.append(f"p debe ser menor a 0.10 (actual: {p:.4f})")
+
+    if lam >= 10:
+        errores.append(f"λ debe ser menor a 10 (actual: {lam:.2f})")
+
+    if errores:
+        mensaje = (
+            "Las condiciones no se cumplen. Este problema debe resolverse "
+            "mediante Distribución Binomial.\n\n"
+            "Condiciones requeridas:\n"
+            "• " + "\n• ".join(errores)
+        )
+        return False, mensaje, lam
+
+    return True, "", lam
+
+
+def parsear_valores_x_poisson(texto: str, lam: float, n: int) -> list[int]:
+    """
+    Parsea el texto de entrada de valores X para Poisson
+
+    Args:
+        texto (str): Texto con valores separados por coma, "todos", o un solo número
+        lam (float): Parámetro λ para determinar rango máximo sugerido
+        n (int): Tamaño de muestra (límite máximo de X)
+
+    Returns:
+        list: Lista de valores enteros de X (ningún valor puede exceder n)
+    """
+    texto = texto.strip().lower()
+
+    if texto == "todos" or texto == "":
+        return list(range(0, n + 1))
+
+    if "," not in texto:
+        try:
+            valor_max = int(texto)
+            if valor_max < 0:
+                return [0]
+            return list(range(0, min(valor_max, n) + 1))
+        except ValueError:
+            return [0]
+
+    valores_x = [min(int(x.strip()), n) for x in texto.split(",")]
+    return valores_x
+
+
+def validar_valores_x_poisson(valores_x: list[int], n: int) -> tuple[bool, str]:
+    """
+    Valida que los valores de X no excedan el tamaño de muestra
+
+    Args:
+        valores_x (list): Lista de valores de X
+        n (int): Tamaño de muestra (valor máximo válido)
+
+    Returns:
+        tuple: (es_valido, mensaje_error)
+    """
+    for x in valores_x:
+        if x > n:
+            return (
+                False,
+                f"El valor X={x} no puede ser mayor que el tamaño de la muestra (n={n})",
+            )
+        if x < 0:
+            return False, f"El valor X={x} no puede ser negativo"
+
+    return True, ""

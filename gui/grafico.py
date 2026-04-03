@@ -921,7 +921,9 @@ class GraficoBinomial:
             fill="both", expand=True, padx=5, pady=5, before=self.toggle_frame
         )
 
-    def crear_barras_agrupadas(self, valores_k, probs_orig, probs_poisson, k_destacado, n, titulo="Comparación"):
+    def crear_barras_agrupadas(
+        self, valores_k, probs_orig, probs_poisson, k_destacado, n, titulo="Comparación"
+    ):
         """
         Crea gráfica de barras agrupadas comparando dos distribuciones
 
@@ -944,36 +946,47 @@ class GraficoBinomial:
         width = 0.35  # Ancho de cada barra
 
         # Crear barras agrupadas
-        bars1 = self.ax.bar(x - width/2, probs_orig, width,
-                            label='Original', color='#3b8ed0', alpha=0.8)
-        bars2 = self.ax.bar(x + width/2, probs_poisson, width,
-                            label='Poisson', color='#ff6b6b', alpha=0.8)
+        bars1 = self.ax.bar(
+            x - width / 2,
+            probs_orig,
+            width,
+            label="Original",
+            color="#3b8ed0",
+            alpha=0.8,
+        )
+        bars2 = self.ax.bar(
+            x + width / 2,
+            probs_poisson,
+            width,
+            label="Poisson",
+            color="#ff6b6b",
+            alpha=0.8,
+        )
 
         # Destacar barra de k_ingresado
         if k_destacado is not None and k_destacado in valores_k:
             idx = valores_k.index(k_destacado)
             bars1[idx].set_alpha(1.0)
             bars1[idx].set_linewidth(2)
-            bars1[idx].set_edgecolor('white')
+            bars1[idx].set_edgecolor("white")
             bars2[idx].set_alpha(1.0)
             bars2[idx].set_linewidth(2)
-            bars2[idx].set_edgecolor('white')
+            bars2[idx].set_edgecolor("white")
 
         # Configurar ejes
-        self.ax.set_xlabel('k', fontsize=12)
-        self.ax.set_ylabel('P(X=k)', fontsize=12)
-        self.ax.set_title(titulo, fontsize=14, fontweight='bold')
+        self.ax.set_xlabel("k", fontsize=12)
+        self.ax.set_ylabel("P(X=k)", fontsize=12)
+        self.ax.set_title(titulo, fontsize=14, fontweight="bold")
         self.ax.legend(fontsize=10)
-        self.ax.grid(True, alpha=0.3, linestyle='--')
+        self.ax.grid(True, alpha=0.3, linestyle="--")
 
         # Configurar fondo
-        self.ax.set_facecolor('#2b2b2b')
-        self.figura.patch.set_facecolor('#2b2b2b')
-        self.ax.tick_params(axis='x', colors='white')
-        self.ax.tick_params(axis='y', colors='white')
-        self.ax.xaxis.label.set_color('white')
-        self.ax.yaxis.label.set_color('white')
-        self.ax.title.set_color('white')
+        self.ax.set_facecolor("#2b2b2b")
+        self.figura.patch.set_facecolor("#2b2b2b")
+        self.ax.tick_params(axis="x", colors="white")
+        self.ax.tick_params(axis="y", colors="white")
+        self.ax.xaxis.label.set_color("white")
+        self.ax.yaxis.label.set_color("white")
 
         # Ajustar ticks si n es grande
         if n > 50:

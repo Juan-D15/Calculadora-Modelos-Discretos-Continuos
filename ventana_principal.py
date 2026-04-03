@@ -325,7 +325,23 @@ class VentanaPrincipal:
                 messagebox.showerror("Error de Validación", mensaje)
                 return
 
+            # Check if Poisson approximation is activated
+            if (
+                hasattr(self.dashboard.campos_hipergeometrica, "chk_poisson")
+                and self.dashboard.campos_hipergeometrica.chk_poisson.get()
+            ):
+                self.calcular_poisson_hipergeometrica()
+                return
+
             cumple, porcentaje = cumple_condicion_hipergeometrica(n, N)
+
+            # Check if Poisson approximation is activated
+            if (
+                hasattr(self.dashboard.campos_hipergeometrica, "chk_poisson")
+                and self.dashboard.campos_hipergeometrica.chk_poisson.get()
+            ):
+                self.calcular_poisson_hipergeometrica()
+                return
 
             if not cumple:
                 mensaje = generar_mensaje_usar_binomial(n, N, K, porcentaje)
