@@ -48,6 +48,7 @@ from utils.validaciones import (
     normalizar_probabilidad,
 )
 from utils.formato import generar_mensaje_usar_binomial
+from utils.mm1_queue import MM1Queue
 from data_viewer import DataViewerWindow
 
 
@@ -308,192 +309,76 @@ class VentanaPrincipal:
                 f"Ocurrió un error al procesar los datos:\n\n{str(e)}",
             )
 
-    def calcular_hipergeometrica(self):
-        """Procesa los datos y realiza los cálculos de distribución hipergeométrica"""
+    def calcular_mm1(self):
+        """Procesa los datos y realiza los cálculos del modelo M/M/1"""
         try:
-            valores = self.dashboard.obtener_campos_hipergeometrica()
+            valores = self.dashboard.obtener_campos_mm1()
 
             if not valores:
                 return
 
-            N = int(valores["N"])
-            K = int(valores["K"])
-            n = int(valores["n"])
-
-            valido, mensaje = validar_parametros_hipergeometrica(n, N, K)
-            if not valido:
-                messagebox.showerror("Error de Validación", mensaje)
-                return
-
-            # Check if Poisson approximation is activated
-            if (
-                hasattr(self.dashboard.campos_hipergeometrica, "chk_poisson")
-                and self.dashboard.campos_hipergeometrica.chk_poisson.get()
-            ):
-                self.calcular_poisson_hipergeometrica()
-                return
-
-            cumple, porcentaje = cumple_condicion_hipergeometrica(n, N)
-
-            # Check if Poisson approximation is activated
-            if (
-                hasattr(self.dashboard.campos_hipergeometrica, "chk_poisson")
-                and self.dashboard.campos_hipergeometrica.chk_poisson.get()
-            ):
-                self.calcular_poisson_hipergeometrica()
-                return
-
-            if not cumple:
-                mensaje = generar_mensaje_usar_binomial(n, N, K, porcentaje)
-                datos_advertencia = {
-                    "n": n,
-                    "N": N,
-                    "K": K,
-                    "cumple_condicion": False,
-                    "porcentaje_muestra": porcentaje,
-                }
-                self.dashboard.mostrar_resultados_hipergeometrica(datos_advertencia)
-                return
-
-            valores_x = parsear_valores_x_hipergeometrica(valores["x"], n, K)
-
-            valido, mensaje = validar_valores_x_hipergeometrica(valores_x, n, K)
-            if not valido:
-                messagebox.showerror("Error de Validación", mensaje)
-                return
-
-            probabilidades = calcular_probabilidades_hipergeometrica(valores_x, n, N, K)
-            media = calcular_media_hipergeometrica(n, N, K)
-            desviacion = calcular_desviacion_hipergeometrica(n, N, K)
-            mediana = calcular_mediana_hipergeometrica(n, N, K)
-
-            sesgo, interpretacion_sesgo, tipo_sesgo_formula = (
-                calcular_sesgo_hipergeometrica(n, N, K)
-            )
-            tipo_sesgo_media_mediana = determinar_tipo_sesgo(media, mediana)
-            curtosis, interpretacion_curtosis = calcular_curtosis_hipergeometrica(
-                n, N, K
-            )
-
-            datos_resultados = {
-                "n": n,
-                "N": N,
-                "K": K,
-                "valores_x": valores_x,
-                "probabilidades": probabilidades,
-                "media": media,
-                "desviacion": desviacion,
-                "mediana": mediana,
-                "sesgo": sesgo,
-                "interpretacion_sesgo": interpretacion_sesgo,
-                "curtosis": curtosis,
-                "interpretacion_curtosis": interpretacion_curtosis,
-                "cumple_condicion": cumple,
-                "porcentaje_muestra": porcentaje,
-            }
-
-            self.dashboard.mostrar_resultados_hipergeometrica(datos_resultados)
-
-            p = K / N if N > 0 else 0
-            x_destacado = valores_x[0] if len(valores_x) == 1 else None
-            self.dashboard.crear_grafico_hipergeometrica(
-                valores_x, probabilidades, n, N, K, p, x_destacado
-            )
-
-        except ValueError as e:
-            messagebox.showerror(
-                "Error de Entrada",
-                f"Por favor ingrese valores numéricos válidos.\n\nDetalle: {str(e)}",
-            )
-        except Exception as e:
-            messagebox.showerror(
-                "Error Inesperado",
-                f"Ocurrió un error al procesar los datos:\n\n{str(e)}",
-            )
-
-    def calcular_poisson(self):
-        """Procesa los datos y realiza los cálculos de distribución de Poisson"""
-        try:
-            valores = self.dashboard.obtener_campos_poisson()
-
-            if not valores:
-                return
-
+            lam_str = valores.get("lam", "").strip()
+            mu_str = valores.get("mu", "").strip()
             n_str = valores.get("n", "").strip()
-            p_str = valores.get("p", "").strip()
-            x_str = valores.get("x", "").strip()
 
-            if not n_str:
+            if not lam_str:
                 messagebox.showerror(
                     "Error de Validación",
-                    "El número de ensayos (n) es obligatorio",
+                    "La tasa de llegada (λ) es obligatoria",
                 )
                 return
 
-            if not p_str:
+            if not mu_str:
                 messagebox.showerror(
                     "Error de Validación",
-                    "La probabilidad (p) es obligatoria",
+                    "La tasa de servicio (μ) es obligatoria",
                 )
                 return
 
-            n = int(n_str)
+            lam = float(lam_str)
+            mu = float(mu_str)
 
-            if n <= 0:
-                messagebox.showerror(
-                    "Error de Validación",
-                    "El número de ensayos (n) debe ser mayor a 0",
-                )
-                return
+            n_solicitado = 0
+            if n_str:
+                n_solicitado = int(n_str)
+                if n_solicitado < 0:
+                    messagebox.showerror(
+                        "Error de Validación",
+                        "El número de clientes (n) debe ser >= 0",
+                    )
+                    return
 
-            valido, p, error = normalizar_probabilidad(p_str)
-            if not valido:
-                messagebox.showerror("Error de Validación", error)
-                return
+            queue = MM1Queue(lam, mu, n_solicitado)
 
-            valido, mensaje, lam = validar_condiciones_poisson(n, p)
-            if not valido:
-                messagebox.showerror(
-                    "Condiciones No Cumplidas",
-                    mensaje,
-                )
-                return
+            probabilidades = [queue.pn(i) for i in range(n_solicitado + 1)]
 
-            valores_x = parsear_valores_x_poisson(x_str, lam, n)
-
-            valido, mensaje = validar_valores_x_poisson(valores_x, n)
-            if not valido:
-                messagebox.showerror("Error de Validación", mensaje)
-                return
-
-            probabilidades = calcular_probabilidades_poisson(valores_x, lam)
-            media = lam
-            desviacion = calcular_desviacion_poisson(lam)
-            sesgo, interpretacion_sesgo = calcular_sesgo_poisson(lam)
-            curtosis, interpretacion_curtosis = calcular_curtosis_poisson(lam)
+            prob_n = queue.pn(n_solicitado)
 
             datos_resultados = {
-                "n": n,
-                "p": p,
                 "lambda": lam,
-                "valores_x": valores_x,
+                "mu": mu,
+                "rho": queue.rho,
+                "Ls": queue.Ls,
+                "Lq": queue.Lq,
+                "Ws": queue.Ws,
+                "Wq": queue.Wq,
+                "P0": queue.P0,
                 "probabilidades": probabilidades,
-                "media": media,
-                "desviacion": desviacion,
-                "sesgo": sesgo,
-                "interpretacion_sesgo": interpretacion_sesgo,
-                "curtosis": curtosis,
-                "interpretacion_curtosis": interpretacion_curtosis,
+                "n_solicitado": n_solicitado,
+                "prob_n": prob_n,
             }
 
-            self.dashboard.mostrar_resultados_poisson(datos_resultados)
+            self.dashboard.mostrar_resultados_mm1(datos_resultados)
 
-            x_destacado = valores_x[0] if len(valores_x) == 1 else None
-            self.dashboard.crear_grafico_poisson(
-                valores_x, probabilidades, lam, n, p, x_destacado
-            )
+            if self.dashboard.grafico_mm1:
+                self.dashboard.grafico_mm1.crear_grafico_mm1(queue)
 
         except ValueError as e:
+            messagebox.showerror(
+                "Error de Validación",
+                str(e),
+            )
+        except TypeError as e:
             messagebox.showerror(
                 "Error de Entrada",
                 f"Por favor ingrese valores numéricos válidos.\n\nDetalle: {str(e)}",
@@ -501,7 +386,7 @@ class VentanaPrincipal:
         except Exception as e:
             messagebox.showerror(
                 "Error Inesperado",
-                f"Ocurrió un error al procesar los datos:\n\n{str(e)}",
+                f"Ocurrió un error al calcular el modelo M/M/1:\n\n{str(e)}",
             )
 
     def abrir_analisis_archivo(self):

@@ -997,3 +997,102 @@ class GraficoBinomial:
         self.canvas = FigureCanvasTkAgg(self.figura, master=self.frame)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
+
+
+class GraficoMM1:
+    """Clase para crear gráficos del modelo M/M/1"""
+
+    def __init__(self, frame_contenedor):
+        """
+        Inicializa el gestor de gráficos para M/M/1
+
+        Args:
+            frame_contenedor: Frame de tkinter donde se mostrará el gráfico
+        """
+        self.frame = frame_contenedor
+        self.canvas = None
+        self.figura = None
+
+    def limpiar(self):
+        """Limpia el gráfico actual y cierra la figura de matplotlib"""
+        try:
+            if self.frame is not None and self.frame.winfo_exists():
+                for widget in self.frame.winfo_children():
+                    widget.destroy()
+        except Exception:
+            pass
+
+        if self.figura is not None:
+            try:
+                plt.close(self.figura)
+            except Exception:
+                pass
+            self.figura = None
+
+        self.canvas = None
+
+    def crear_grafico_mm1(self, queue):
+        """
+        Crea los gráficos de resultados del modelo M/M/1
+
+        Args:
+            queue (MM1Queue): Instancia de MM1Queue con los cálculos
+        """
+        self.limpiar()
+
+        bg_color = "#2b2b2b"
+        grid_color = "#444444"
+        text_color = "#ffffff"
+
+        self.figura, axes = plt.subplots(1, 2, figsize=(14, 5))
+        self.figura.patch.set_facecolor(bg_color)
+
+        valores_n = list(range(21))
+        probabilidades = [queue.pn(i) for i in valores_n]
+
+        axes[0].bar(
+            valores_n, probabilidades, color="#9b59b6", edgecolor="#7d3c98", alpha=0.8
+        )
+        axes[0].set_title(
+            "Distribución P(N=n)", fontsize=12, color=text_color, fontweight="bold"
+        )
+        axes[0].set_xlabel("Número de clientes (n)", color=text_color)
+        axes[0].set_ylabel("Probabilidad P(N=n)", color=text_color)
+        axes[0].set_facecolor(bg_color)
+        axes[0].grid(True, color=grid_color, linestyle="--", alpha=0.5)
+        axes[0].tick_params(colors=text_color)
+        for spine in axes[0].spines.values():
+            spine.set_color(grid_color)
+
+        rhos = np.linspace(0.01, 0.99, 50)
+        mu_fijo = queue.mu
+
+        Lqs = [(r**2) / (1 - r) for r in rhos]
+        Lss = [r / (1 - r) for r in rhos]
+
+        axes[1].plot(
+            rhos, Lqs, label="Lq (cola)", color="#e74c3c", linewidth=2, marker=""
+        )
+        axes[1].plot(
+            rhos, Lss, label="Ls (sistema)", color="#2ecc71", linewidth=2, marker=""
+        )
+        axes[1].set_title(
+            "Longitud vs Factor de Utilización",
+            fontsize=12,
+            color=text_color,
+            fontweight="bold",
+        )
+        axes[1].set_xlabel("Factor de utilización (ρ)", color=text_color)
+        axes[1].set_ylabel("Longitud promedio", color=text_color)
+        axes[1].legend(facecolor="#3b3b3b", edgecolor="#555555", labelcolor=text_color)
+        axes[1].set_facecolor(bg_color)
+        axes[1].grid(True, color=grid_color, linestyle="--", alpha=0.5)
+        axes[1].tick_params(colors=text_color)
+        for spine in axes[1].spines.values():
+            spine.set_color(grid_color)
+
+        plt.tight_layout()
+
+        self.canvas = FigureCanvasTkAgg(self.figura, master=self.frame)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)

@@ -9,9 +9,11 @@ from gui.campos_entrada import (
     CamposEntrada,
     CamposEntradaHipergeometrica,
     CamposEntradaPoisson,
+    CamposEntradaMM1,
 )
 from gui.area_resultados import AreaResultados
 from gui.grafico import GraficoBinomial
+from gui.grafico import GraficoMM1
 from gui.tabla_comparacion import TablaComparacion
 from gui.tabla_comparacion_poisson import TablaComparacionPoisson
 
@@ -43,6 +45,13 @@ class Dashboard:
         self.modo_comparacion = False
         self.datos_comparacion_binomial = None
         self.datos_comparacion_hipergeometrica = None
+
+        self.campos_mm1 = None
+        self.grafico_mm1 = None
+        self.toggle_mm1_frame = None
+        self.toggle_mm1 = None
+        self.results_mm1_frame = None
+        self.graph_mm1_frame = None
 
         self.ventana_analisis_archivo = None
 
@@ -79,6 +88,8 @@ class Dashboard:
             "Hipergeométrica", "hipergeometrica", False
         )
 
+        self.btn_mm1 = self.crear_boton_sidebar("M/M/1", "mm1", False, color="#3b8ed0")
+
         separador = ctk.CTkFrame(self.sidebar, height=2, fg_color="gray50")
         separador.pack(fill="x", padx=10, pady=15)
 
@@ -109,7 +120,7 @@ class Dashboard:
         if self.ventana_principal:
             self.ventana_principal.abrir_analisis_archivo()
 
-    def crear_boton_sidebar(self, texto, distribucion, es_activo):
+    def crear_boton_sidebar(self, texto, distribucion, es_activo, color=None):
         """
         Crea un botón de navegación en el sidebar
 
@@ -117,15 +128,17 @@ class Dashboard:
             texto: Texto del botón
             distribucion: Nombre de la distribución
             es_activo: Si es la distribución activa
+            color: Color personalizado del botón (opcional)
         """
-        color = "#3b8ed0" if es_activo else "transparent"
+        default_color = "#3b8ed0"
+        btn_color = color if color else default_color
         hover_color = "#3672a9" if es_activo else ("gray70", "gray30")
 
         btn = ctk.CTkButton(
             self.sidebar,
             text=texto,
             font=ctk.CTkFont(size=12),
-            fg_color=color,
+            fg_color=btn_color,
             hover_color=hover_color,
             text_color=("white", "gray10") if es_activo else ("gray10", "gray90"),
             anchor="w",
@@ -169,6 +182,8 @@ class Dashboard:
             self.crear_interfaz_geometrica()
         elif distribucion == "hipergeometrica":
             self.crear_interfaz_hipergeometrica()
+        elif distribucion == "mm1":
+            self.crear_interfaz_mm1()
 
     def actualizar_botones_sidebar(self, distribucion_activo):
         """Actualiza el estado visual de los botones del sidebar"""
@@ -176,6 +191,7 @@ class Dashboard:
             "binomial": self.btn_binomial,
             "poisson": self.btn_poisson,
             "hipergeometrica": self.btn_hipergeometrica,
+            "mm1": self.btn_mm1,
         }
 
         for dist, btn in botones.items():
@@ -434,6 +450,109 @@ class Dashboard:
         self.area_resultados = AreaResultados(text_frame)
         self.grafico = GraficoBinomial(graph_frame)
 
+    def crear_interfaz_mm1(self):
+        """Crea la interfaz para modelo de colas M/M/1"""
+        titulo = ctk.CTkLabel(
+            self.content_frame,
+            text="MODELO DE COLAS M/M/1",
+            font=ctk.CTkFont(size=22, weight="bold"),
+        )
+        titulo.pack(pady=(12, 8))
+
+        descripcion = ctk.CTkLabel(
+            self.content_frame,
+            text="Cola de un servidor con llegadas Poisson y servicio exponencial",
+            font=ctk.CTkFont(size=11),
+            text_color="gray",
+        )
+        descripcion.pack(pady=(0, 12))
+
+        input_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        input_frame.pack(fill="x", padx=15, pady=5)
+
+        self.campos_mm1 = CamposEntradaMM1(input_frame)
+
+        button_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        button_frame.pack(fill="x", padx=15, pady=8)
+
+        calc_btn = ctk.CTkButton(
+            button_frame,
+            text="CALCULAR",
+            command=self.calcular_mm1,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            height=38,
+            width=140,
+            fg_color="#3b8ed0",
+            hover_color="#3672a9",
+            corner_radius=8,
+        )
+        calc_btn.pack(side="left", padx=5, pady=5)
+
+        clear_btn = ctk.CTkButton(
+            button_frame,
+            text="LIMPIAR",
+            command=self.limpiar_mm1,
+            font=ctk.CTkFont(size=13),
+            height=38,
+            width=110,
+            fg_color="gray",
+            hover_color="darkgray",
+            corner_radius=8,
+        )
+        clear_btn.pack(side="left", padx=5, pady=5)
+
+        self.toggle_mm1_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        self.toggle_mm1_frame.pack(fill="x", padx=15, pady=(0, 5))
+
+        self.toggle_mm1 = ctk.CTkSegmentedButton(
+            self.toggle_mm1_frame,
+            values=["Resultados", "Gráficos"],
+            command=self._cambiar_vista_mm1,
+            selected_color="#3b8ed0",
+            selected_hover_color="#3672a9",
+        )
+        self.toggle_mm1.set("Resultados")
+        self.toggle_mm1.pack()
+
+        results_container = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        results_container.pack(fill="both", expand=True, padx=12, pady=8)
+
+        results_container.grid_columnconfigure(0, weight=1)
+        results_container.grid_rowconfigure(0, weight=1)
+
+        self.results_mm1_frame = ctk.CTkFrame(results_container)
+        self.results_mm1_frame.grid(row=0, column=0, sticky="nsew")
+
+        self.graph_mm1_frame = ctk.CTkFrame(results_container)
+        self.graph_mm1_frame.grid(row=0, column=0, sticky="nsew")
+        self.graph_mm1_frame.grid_remove()
+
+        self.area_resultados = AreaResultados(self.results_mm1_frame)
+        self.grafico_mm1 = GraficoMM1(self.graph_mm1_frame)
+
+    def _cambiar_vista_mm1(self, valor):
+        """Cambia entre vista de resultados y gráficos"""
+        if valor == "Resultados":
+            self.results_mm1_frame.grid()
+            self.graph_mm1_frame.grid_remove()
+        else:
+            self.results_mm1_frame.grid_remove()
+            self.graph_mm1_frame.grid()
+
+    def calcular_mm1(self):
+        """Calcula el modelo M/M/1"""
+        if self.ventana_principal:
+            self.ventana_principal.calcular_mm1()
+
+    def limpiar_mm1(self):
+        """Limpia campos y resultados de M/M/1"""
+        if self.campos_mm1:
+            self.campos_mm1.limpiar()
+        if self.area_resultados:
+            self.area_resultados.limpiar()
+        if self.grafico_mm1:
+            self.grafico_mm1.limpiar()
+
     def calcular_binomial(self):
         """Calcula la distribución binomial"""
         if self.ventana_principal:
@@ -516,6 +635,12 @@ class Dashboard:
             return self.campos_poisson.obtener_valores()
         return None
 
+    def obtener_campos_mm1(self):
+        """Obtiene los valores de los campos de entrada M/M/1"""
+        if self.campos_mm1:
+            return self.campos_mm1.obtener_valores()
+        return None
+
     def mostrar_resultados(self, texto):
         """Muestra los resultados en el área de texto (compatibilidad)"""
         if self.area_resultados:
@@ -535,6 +660,11 @@ class Dashboard:
         """Muestra resultados estructurados de distribución de Poisson"""
         if self.area_resultados:
             self.area_resultados.mostrar_resultados_poisson(datos)
+
+    def mostrar_resultados_mm1(self, datos):
+        """Muestra resultados del modelo M/M/1"""
+        if self.area_resultados:
+            self.area_resultados.mostrar_resultados_mm1(datos)
 
     def crear_grafico(
         self,
