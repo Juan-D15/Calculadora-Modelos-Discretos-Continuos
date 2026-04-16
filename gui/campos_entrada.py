@@ -369,3 +369,76 @@ class CamposEntradaPoisson:
         self.n_entry.delete(0, "end")
         self.p_entry.delete(0, "end")
         self.x_entry.delete(0, "end")
+
+
+class CamposEntradaMM1:
+    """Clase para gestionar los campos de entrada del modelo M/M/1"""
+
+    def __init__(self, frame_contenedor):
+        """
+        Inicializa los campos de entrada para M/M/1
+
+        Args:
+            frame_contenedor: Frame donde se colocarán los campos
+        """
+        self.frame = frame_contenedor
+        self.lam_entry = None
+        self.mu_entry = None
+        self.n_entry = None
+
+        self.crear_campos()
+
+    def crear_campos(self):
+        """Crea todos los campos de entrada para M/M/1"""
+        row1 = ctk.CTkFrame(self.frame, fg_color="transparent")
+        row1.pack(fill="x", pady=4)
+
+        ctk.CTkLabel(row1, text="Tasa de llegada λ:", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+
+        self.lam_entry = ctk.CTkEntry(row1, width=120, placeholder_text="Ej: 4")
+        self.lam_entry.pack(side="left", padx=8)
+
+        ctk.CTkLabel(row1, text="Tasa de servicio μ:", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+
+        self.mu_entry = ctk.CTkEntry(row1, width=120, placeholder_text="Ej: 6")
+        self.mu_entry.pack(side="left", padx=8)
+
+        ctk.CTkLabel(row1, text="Clientes (n):", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+
+        self.n_entry = ctk.CTkEntry(
+            row1, width=100, placeholder_text="Opcional (ej: 3)"
+        )
+        self.n_entry.pack(side="left", padx=8)
+
+        info_label = ctk.CTkLabel(
+            row1,
+            text="(λ debe ser < μ para sistema estable)",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        info_label.pack(side="left", padx=8)
+
+    def obtener_valores(self):
+        """
+        Obtiene los valores de todos los campos
+
+        Returns:
+            dict: Diccionario con los valores de entrada
+        """
+        return {
+            "lam": self.lam_entry.get().strip(),
+            "mu": self.mu_entry.get().strip(),
+            "n": self.n_entry.get().strip(),
+        }
+
+    def limpiar(self):
+        """Limpia todos los campos de entrada"""
+        self.lam_entry.delete(0, "end")
+        self.mu_entry.delete(0, "end")
+        self.n_entry.delete(0, "end")
