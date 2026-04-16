@@ -733,15 +733,13 @@ class AreaResultados:
             frame_stats,
             text="ESTADÍSTICAS DE APROXIMACIÓN DE POISSON",
             font=ctk.CTkFont(size=12, weight="bold"),
-            text_color=("#1f6aa5", "#1f6aa5")
+            text_color=("#1f6aa5", "#1f6aa5"),
         )
         titulo.pack(pady=5)
 
         # Valor λ
         lam_texto = ctk.CTkLabel(
-            frame_stats,
-            text=f"λ = {datos['lambda']:.4f}",
-            font=ctk.CTkFont(size=11)
+            frame_stats, text=f"λ = {datos['lambda']:.4f}", font=ctk.CTkFont(size=11)
         )
         lam_texto.pack(pady=2)
 
@@ -749,7 +747,7 @@ class AreaResultados:
         media_texto = ctk.CTkLabel(
             frame_stats,
             text=f"Media (μ) = {datos['media']:.4f}",
-            font=ctk.CTkFont(size=11)
+            font=ctk.CTkFont(size=11),
         )
         media_texto.pack(pady=2)
 
@@ -757,7 +755,7 @@ class AreaResultados:
         var_texto = ctk.CTkLabel(
             frame_stats,
             text=f"Varianza (σ²) = {datos['varianza']:.4f}",
-            font=ctk.CTkFont(size=11)
+            font=ctk.CTkFont(size=11),
         )
         var_texto.pack(pady=2)
 
@@ -765,28 +763,26 @@ class AreaResultados:
         desv_texto = ctk.CTkLabel(
             frame_stats,
             text=f"Desviación estándar (σ) = {datos['desviacion']:.4f}",
-            font=ctk.CTkFont(size=11)
+            font=ctk.CTkFont(size=11),
         )
         desv_texto.pack(pady=2)
 
         # Mostrar P(X=k) para k ingresado
-        if datos.get('k_ingresado') is not None:
-            k = datos['k_ingresado']
+        if datos.get("k_ingresado") is not None:
+            k = datos["k_ingresado"]
             separator = ctk.CTkFrame(frame_stats, height=2, fg_color="gray50")
             separator.pack(fill="x", padx=10, pady=10)
 
             prob_label = ctk.CTkLabel(
-                frame_stats,
-                text=f"P(X={k}):",
-                font=ctk.CTkFont(size=11, weight="bold")
+                frame_stats, text=f"P(X={k}):", font=ctk.CTkFont(size=11, weight="bold")
             )
             prob_label.pack(pady=5)
 
-            if 'probs_binom' in datos:
-                if k in datos['valores_k']:
-                    idx = datos['valores_k'].index(k)
-                    prob_binom = datos['probs_binom'][idx]
-                    prob_poisson = datos['probs_poisson'][idx]
+            if "probs_binom" in datos:
+                if k in datos["valores_k"]:
+                    idx = datos["valores_k"].index(k)
+                    prob_binom = datos["probs_binom"][idx]
+                    prob_poisson = datos["probs_poisson"][idx]
                 else:
                     prob_binom = 0.0
                     prob_poisson = 0.0
@@ -794,22 +790,22 @@ class AreaResultados:
                 binom_text = ctk.CTkLabel(
                     frame_stats,
                     text=f"  Original: {prob_binom:.6f}",
-                    font=ctk.CTkFont(size=10)
+                    font=ctk.CTkFont(size=10),
                 )
                 binom_text.pack(pady=2)
 
                 poisson_text = ctk.CTkLabel(
                     frame_stats,
                     text=f"  Poisson:  {prob_poisson:.6f}",
-                    font=ctk.CTkFont(size=10)
+                    font=ctk.CTkFont(size=10),
                 )
                 poisson_text.pack(pady=2)
 
-            elif 'probs_hiper' in datos:
-                if k in datos['valores_k']:
-                    idx = datos['valores_k'].index(k)
-                    prob_hiper = datos['probs_hiper'][idx]
-                    prob_poisson = datos['probs_poisson'][idx]
+            elif "probs_hiper" in datos:
+                if k in datos["valores_k"]:
+                    idx = datos["valores_k"].index(k)
+                    prob_hiper = datos["probs_hiper"][idx]
+                    prob_poisson = datos["probs_poisson"][idx]
                 else:
                     prob_hiper = 0.0
                     prob_poisson = 0.0
@@ -817,13 +813,306 @@ class AreaResultados:
                 hiper_text = ctk.CTkLabel(
                     frame_stats,
                     text=f"  Original: {prob_hiper:.6f}",
-                    font=ctk.CTkFont(size=10)
+                    font=ctk.CTkFont(size=10),
                 )
                 hiper_text.pack(pady=2)
 
                 poisson_text = ctk.CTkLabel(
                     frame_stats,
                     text=f"  Poisson:  {prob_poisson:.6f}",
-                    font=ctk.CTkFont(size=10)
+                    font=ctk.CTkFont(size=10),
                 )
                 poisson_text.pack(pady=2)
+
+    def mostrar_resultados_mm1(self, datos):
+        """
+        Muestra resultados del modelo M/M/1 con diseño visual
+
+        Args:
+            datos (dict): Diccionario con los datos del modelo M/M/1
+        """
+        self.limpiar()
+        self.resultados_data = datos
+
+        titulo = ctk.CTkLabel(
+            self.scrollable_frame,
+            text="RESULTADOS - M/M/1",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=("#3b8ed0", "#3b8ed0"),
+        )
+        titulo.pack(pady=(10, 15))
+
+        row_datos = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        row_datos.pack(fill="x", pady=5)
+        row_datos.grid_columnconfigure(0, weight=1)
+        row_datos.grid_columnconfigure(1, weight=1)
+
+        frame_param = ctk.CTkFrame(row_datos)
+        frame_param.grid(row=0, column=0, sticky="ew", padx=(5, 10), pady=5)
+
+        lbl_titulo_param = ctk.CTkLabel(
+            frame_param,
+            text="PARÁMETROS",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            anchor="w",
+        )
+        lbl_titulo_param.pack(fill="x", padx=10, pady=(10, 5))
+
+        lam = datos.get("lambda", 0)
+        mu = datos.get("mu", 0)
+
+        params = [
+            ("Tasa de llegada (λ):", f"{lam:.4f}"),
+            ("Tasa de servicio (μ):", f"{mu:.4f}"),
+        ]
+
+        for label, valor in params:
+            frame_fila = ctk.CTkFrame(frame_param, fg_color="transparent")
+            frame_fila.pack(fill="x", padx=10, pady=2)
+
+            lbl = ctk.CTkLabel(
+                frame_fila,
+                text=label,
+                font=ctk.CTkFont(size=11),
+                anchor="w",
+            )
+            lbl.pack(side="left")
+
+            val = ctk.CTkLabel(
+                frame_fila,
+                text=valor,
+                font=ctk.CTkFont(size=11, weight="bold"),
+                anchor="w",
+            )
+            val.pack(side="left", padx=5)
+
+        frame_metric = ctk.CTkFrame(row_datos)
+        frame_metric.grid(row=0, column=1, sticky="ew", padx=(10, 5), pady=5)
+
+        lbl_titulo_metric = ctk.CTkLabel(
+            frame_metric,
+            text="MÉTRICAS DEL SISTEMA",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            anchor="w",
+        )
+        lbl_titulo_metric.pack(fill="x", padx=10, pady=(10, 5))
+
+        rho = datos.get("rho", 0)
+        Ls = datos.get("Ls", 0)
+        Lq = datos.get("Lq", 0)
+        Ws = datos.get("Ws", 0)
+        Wq = datos.get("Wq", 0)
+        P0 = datos.get("P0", 0)
+
+        metricas = [
+            ("Factor de utilización (ρ):", f"{rho:.4f} ({rho * 100:.2f}%)"),
+            ("Longitud media sistema (Ls):", f"{Ls:.4f} ({int(Ls)})"),
+            ("Longitud media cola (Lq):", f"{Lq:.4f} ({int(Lq)})"),
+            ("Tiempo medio sistema (Ws):", f"{Ws:.4f}"),
+            ("Tiempo medio cola (Wq):", f"{Wq:.4f}"),
+            ("Prob. sistema vacío (P0):", f"{P0:.4f} ({P0 * 100:.2f}%)"),
+        ]
+
+        for label, valor in metricas:
+            frame_fila = ctk.CTkFrame(frame_metric, fg_color="transparent")
+            frame_fila.pack(fill="x", padx=10, pady=2)
+
+            lbl = ctk.CTkLabel(
+                frame_fila,
+                text=label,
+                font=ctk.CTkFont(size=11),
+                anchor="w",
+            )
+            lbl.pack(side="left")
+
+            val = ctk.CTkLabel(
+                frame_fila,
+                text=valor,
+                font=ctk.CTkFont(size=11, weight="bold"),
+                anchor="w",
+            )
+            val.pack(side="left", padx=5)
+
+        self._crear_seccion_probabilidades_mm1(datos)
+
+    def _crear_seccion_parametros_mm1(self, row, datos):
+        """Crea la sección de parámetros M/M/1"""
+        frame = ctk.CTkFrame(self.scrollable_frame)
+        frame.grid(row=row, column=0, sticky="ew", pady=(0, 10), padx=5)
+
+        lbl_titulo = ctk.CTkLabel(
+            frame,
+            text="PARÁMETROS",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            anchor="w",
+        )
+        lbl_titulo.pack(fill="x", padx=10, pady=(10, 5))
+
+        lam = datos.get("lambda", 0)
+        mu = datos.get("mu", 0)
+
+        params = [
+            ("Tasa de llegada (λ):", f"{lam:.4f}"),
+            ("Tasa de servicio (μ):", f"{mu:.4f}"),
+        ]
+
+        for label, valor in params:
+            frame_param = ctk.CTkFrame(frame, fg_color="transparent")
+            frame_param.pack(fill="x", padx=10, pady=2)
+
+            lbl = ctk.CTkLabel(
+                frame_param,
+                text=label,
+                font=ctk.CTkFont(size=11),
+                width=160,
+                anchor="w",
+            )
+            lbl.pack(side="left")
+
+            val = ctk.CTkLabel(
+                frame_param,
+                text=valor,
+                font=ctk.CTkFont(size=11, weight="bold"),
+                anchor="w",
+            )
+            val.pack(side="left", padx=5)
+
+        lbl_espacio = ctk.CTkLabel(frame, text="")
+        lbl_espacio.pack(pady=(5, 0))
+
+        return row + 1
+
+    def _crear_seccion_metricas_mm1(self, row, datos):
+        """Crea la sección de métricas del sistema M/M/1"""
+        frame = ctk.CTkFrame(self.scrollable_frame)
+        frame.grid(row=row, column=0, sticky="ew", pady=(0, 10), padx=5)
+
+        lbl_titulo = ctk.CTkLabel(
+            frame,
+            text="MÉTRICAS DEL SISTEMA",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            anchor="w",
+        )
+        lbl_titulo.pack(fill="x", padx=10, pady=(10, 5))
+
+        rho = datos.get("rho", 0)
+        Ls = datos.get("Ls", 0)
+        Lq = datos.get("Lq", 0)
+        Ws = datos.get("Ws", 0)
+        Wq = datos.get("Wq", 0)
+        P0 = datos.get("P0", 0)
+
+        metricas = [
+            ("Factor de utilización (ρ):", f"{rho:.4f} ({rho * 100:.2f}%)"),
+            ("Longitud media sistema (Ls):", f"{Ls:.4f} ({int(Ls)})"),
+            ("Longitud media cola (Lq):", f"{Lq:.4f} ({int(Lq)})"),
+            ("Tiempo medio sistema (Ws):", f"{Ws:.4f}"),
+            ("Tiempo medio cola (Wq):", f"{Wq:.4f}"),
+            ("Prob. sistema vacío (P0):", f"{P0:.4f} ({P0 * 100:.2f}%)"),
+        ]
+
+        for label, valor in metricas:
+            frame_metric = ctk.CTkFrame(frame, fg_color="transparent")
+            frame_metric.pack(fill="x", padx=10, pady=2)
+
+            lbl = ctk.CTkLabel(
+                frame_metric,
+                text=label,
+                font=ctk.CTkFont(size=11),
+                width=180,
+                anchor="w",
+            )
+            lbl.pack(side="left")
+
+            val = ctk.CTkLabel(
+                frame_metric,
+                text=valor,
+                font=ctk.CTkFont(size=11, weight="bold"),
+                anchor="w",
+            )
+            val.pack(side="left", padx=5)
+
+        lbl_espacio = ctk.CTkLabel(frame, text="")
+        lbl_espacio.pack(pady=(5, 0))
+
+        return row + 1
+
+    def _crear_seccion_probabilidades_mm1(self, datos):
+        """Crea la sección de probabilidades P(N=n)"""
+        frame = ctk.CTkFrame(self.scrollable_frame)
+        frame.pack(fill="x", pady=(0, 10), padx=5)
+
+        lbl_titulo = ctk.CTkLabel(
+            frame,
+            text="PROBABILIDADES P(N=n)",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            anchor="w",
+        )
+        lbl_titulo.pack(fill="x", padx=10, pady=(10, 5))
+
+        probabilidades = datos.get("probabilidades", [])
+        n_solicitado = datos.get("n_solicitado", 0)
+        prob_n = datos.get("prob_n", 0)
+
+        if probabilidades:
+            grid_frame = ctk.CTkFrame(frame, fg_color="transparent")
+            grid_frame.pack(fill="x", padx=10, pady=5)
+
+            cols = 4
+            for i, prob in enumerate(probabilidades):
+                row_idx = i // cols
+                col_idx = i % cols
+
+                cell_frame = ctk.CTkFrame(grid_frame, fg_color="transparent")
+                cell_frame.grid(
+                    row=row_idx, column=col_idx, sticky="w", padx=10, pady=3
+                )
+
+                es_solicitado = i == n_solicitado
+
+                color_texto = "#3b8ed0" if es_solicitado else "white"
+                peso = "bold" if es_solicitado else "normal"
+
+                lbl_n = ctk.CTkLabel(
+                    cell_frame,
+                    text=f"n={i}:",
+                    font=ctk.CTkFont(size=11, weight=peso),
+                    text_color=color_texto,
+                    width=40,
+                    anchor="w",
+                )
+                lbl_n.pack(side="left")
+
+                lbl_prob = ctk.CTkLabel(
+                    cell_frame,
+                    text=f"{prob:.4f}",
+                    font=ctk.CTkFont(size=11, weight=peso),
+                    text_color=color_texto,
+                    width=70,
+                    anchor="w",
+                )
+                lbl_prob.pack(side="left", padx=2)
+
+                lbl_porc = ctk.CTkLabel(
+                    cell_frame,
+                    text=f"({prob * 100:.1f}%)",
+                    font=ctk.CTkFont(size=9),
+                    text_color="#3b8ed0" if es_solicitado else "gray",
+                    anchor="w",
+                )
+                lbl_porc.pack(side="left", padx=2)
+
+            frame_resultado = ctk.CTkFrame(frame, fg_color="transparent")
+            frame_resultado.pack(fill="x", padx=10, pady=(10, 5))
+
+            lbl_resultado = ctk.CTkLabel(
+                frame_resultado,
+                text=f"→ P(N={n_solicitado}) = {prob_n:.4f} ({prob_n * 100:.2f}%)",
+                font=ctk.CTkFont(size=12, weight="bold"),
+                text_color="#3b8ed0",
+                anchor="w",
+            )
+            lbl_resultado.pack(fill="x", padx=5, pady=5)
+
+        lbl_espacio = ctk.CTkLabel(frame, text="")
+        lbl_espacio.pack(pady=(5, 0))
