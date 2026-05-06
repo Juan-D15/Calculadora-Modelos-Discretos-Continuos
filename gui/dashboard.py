@@ -830,6 +830,17 @@ class Dashboard:
             return
 
         parametros = self.ventana_principal.precargar_parametros_super24(escenario)
+
+        if self.datos_super24:
+            ventas = self.datos_super24.get("ventas_por_escenario", {}).get(
+                escenario["id"], []
+            )
+            k_total = sum(int(item.get("unidades_promedio") or 0) for item in ventas)
+            if k_total > parametros["N"]:
+                parametros["N"] = k_total
+                if parametros["n"] > parametros["N"]:
+                    parametros["n"] = parametros["N"]
+
         self.super24_N_entry.delete(0, "end")
         self.super24_N_entry.insert(0, str(parametros["N"]))
         self.super24_n_entry.delete(0, "end")
@@ -852,6 +863,15 @@ class Dashboard:
             categoria = ventas.get("categoria", "--")
             k_importado = int(ventas.get("unidades_promedio") or 0)
             texto = f"{texto} | K importado ({categoria}): {k_importado} | N mínimo: {k_importado}"
+
+            if self.super24_N_entry:
+                try:
+                    N_actual = int(self.super24_N_entry.get().strip() or 0)
+                except ValueError:
+                    N_actual = 0
+                if k_importado > N_actual:
+                    self.super24_N_entry.delete(0, "end")
+                    self.super24_N_entry.insert(0, str(k_importado))
 
         self.super24_info_label.configure(text=texto)
 
