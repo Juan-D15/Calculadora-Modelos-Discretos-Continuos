@@ -2,6 +2,7 @@
 Ventana principal de la aplicación de distribución binomial
 Diseño mejorado y centrado
 """
+import re
 
 import customtkinter as ctk
 from tkinter import messagebox
@@ -50,6 +51,8 @@ from utils.validaciones import (
 from utils.formato import generar_mensaje_usar_binomial
 from utils.mm1_queue import MM1Queue
 from data_viewer import DataViewerWindow
+from db_connector import DatabaseConfigError, DatabaseQueryError, Super24DBConnector
+from probability_engine import ParametrosInvalidosError, ProbabilityEngine
 
 
 class VentanaPrincipal:
@@ -392,6 +395,420 @@ class VentanaPrincipal:
     def abrir_analisis_archivo(self):
         """Abre la ventana de análisis desde archivo."""
         DataViewerWindow(master=self.root)
+
+    def cargar_datos_super24(self):
+        """Carga la última corrida del simulador Super24 desde PostgreSQL."""
+        try:
+            connector = Super24DBConnector()
+            ejecucion = connector.obtener_ultima_ejecucion()
+            if not ejecucion:
+                messagebox.showerror(
+                    "Sin datos",
+                    "No se encontró ninguna corrida en ejecucion_simulacion.",
+                )
+                return
+
+            escenarios = connector.obtener_ultimos_escenarios_por_tipo(limite_por_tipo=5)
+            if not escenarios:
+                messagebox.showerror(
+                    "Sin escenarios",
+                    "No se encontraron escenarios registrados en la base de datos.",
+                )
+                return
+
+            ventas_por_escenario = {}
+            for escenario in escenarios:
+                ventas_por_escenario[escenario["id"]] = connector.obtener_ventas_por_categoria(
+                    escenario["id"]
+                )
+
+            self.dashboard.actualizar_datos_super24(
+                {
+                    "ejecucion": ejecucion,
+                    "escenarios": escenarios,
+                    "ventas_por_escenario": ventas_por_escenario,
+                }
+            )
+            messagebox.showinfo(
+                "Datos cargados",
+                f"Se cargaron {len(escenarios)} escenarios recientes agrupados por tipo.",
+            )
+
+        except DatabaseConfigError as e:
+            messagebox.showerror("Error de Configuración", str(e))
+        except DatabaseQueryError as e:
+            messagebox.showerror("Error de Base de Datos", str(e))
+        except Exception as e:
+            messagebox.showerror(
+                "Error Inesperado",
+                f"No se pudieron cargar datos del simulador:\n\n{str(e)}",
+            )
+
+    def calcular_super24(self):
+        """Calcula una distribución usando datos importados desde Super24."""
+        try:
+            valores = self.dashboard.obtener_campos_super24()
+            if not valores:
+                return
+
+            escenario = self.dashboard.obtener_escenario_super24_seleccionado()
+            if not escenario:
+                messagebox.showerror(
+                    "Datos requeridos",
+                    "Debe cargar datos y seleccionar un escenario del simulador.",
+                )
+                return
+
+            distribucion = valores.get("distribucion", "Automática")
+            if distribucion == "M/M/1":
+                self._calcular_super24_mm1(escenario, valores)
+                return
+
+            ventas = self.dashboard.obtener_ventas_super24_seleccionadas()
+            if not ventas:
+                messagebox.showerror(
+                    "Datos requeridos",
+                    "Debe seleccionar una categoría con ventas registradas.",
+                )
+                return
+
+            N = int(valores.get("N") or 0)
+            n = int(valores.get("n") or 0)
+            K = int(ventas.get("unidades_promedio") or 0)
+
+            engine = ProbabilityEngine()
+            parametros = engine.preparar_parametros_desde_ventas(N=N, K=K, n=n)
+            modelo = parametros["modelo_recomendado"] if distribucion == "Automática" else distribucion
+
+            if distribucion != "Automática" and modelo != parametros["modelo_recomendado"]:
+                messagebox.showwarning(
+                    "Modelo forzado",
+                    f"El motor recomienda {parametros['modelo_recomendado']} porque "
+                    f"{parametros['motivo']}. Se continuará con {modelo}.",
+                )
+
+            if modelo == "Binomial":
+                self._calcular_super24_binomial(parametros, valores.get("x", ""))
+            elif modelo == "Hipergeométrica":
+                self._calcular_super24_hipergeometrica(parametros, valores.get("x", ""))
+            elif modelo == "Poisson":
+                self._calcular_super24_poisson(parametros, valores.get("x", ""))
+            else:
+                messagebox.showerror("Distribución no válida", f"Modelo no soportado: {modelo}")
+
+        except ParametrosInvalidosError as e:
+            messagebox.showerror("Error de Validación", str(e))
+        except ValueError as e:
+            messagebox.showerror(
+                "Error de Entrada",
+                f"Ingrese valores numéricos válidos para N, n y X.\n\nDetalle: {str(e)}",
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Error Inesperado",
+                f"No se pudo calcular con datos del simulador:\n\n{str(e)}",
+            )
+
+    def _calcular_super24_mm1(self, escenario, valores):
+        """Calcula M/M/1 con λ y μ observadas del escenario seleccionado."""
+        lam, mu = self._obtener_tasas_super24_mm1(escenario, valores)
+        servidores = int(escenario.get("servidores_c") or 1)
+        n_solicitado = int(valores.get("mm1_n") or 0)
+
+        if servidores != 1:
+            messagebox.showwarning(
+                "Modelo M/M/1",
+                f"El escenario tiene servidores_c={servidores}. "
+                "Esta calculadora evalúa M/M/1 usando λ y μ observadas del escenario.",
+            )
+
+        queue = MM1Queue(lam, mu, n_solicitado)
+        probabilidades = [queue.pn(i) for i in range(n_solicitado + 1)]
+
+        datos_resultados = {
+            "lambda": lam,
+            "mu": mu,
+            "rho": queue.rho,
+            "Ls": queue.Ls,
+            "Lq": queue.Lq,
+            "Ws": queue.Ws,
+            "Wq": queue.Wq,
+            "P0": queue.P0,
+            "probabilidades": probabilidades,
+            "n_solicitado": n_solicitado,
+            "prob_n": queue.pn(n_solicitado),
+        }
+
+        if self.dashboard.grafico:
+            self.dashboard.grafico.limpiar()
+        self.dashboard.mostrar_vista_resultados_super24()
+        self.dashboard.mostrar_resultados_mm1(datos_resultados)
+        if self.dashboard.grafico_mm1:
+            self.dashboard.grafico_mm1.crear_grafico_mm1(queue)
+
+    def precargar_tasas_super24_mm1(self, escenario) -> tuple[float, float]:
+        """
+        Calcula λ y μ observadas para precargar los campos editables Super24.
+
+        Args:
+            escenario (dict): Escenario importado desde Super24.
+
+        Returns:
+            tuple[float, float]: λ y μ en clientes por hora.
+        """
+        return self._derivar_tasas_super24_mm1(escenario)
+
+    def precargar_parametros_super24(self, escenario) -> dict:
+        """
+        Calcula parámetros editables desde datos observados de Super24.
+
+        Fórmulas:
+        - N = λ_real × horas_simulacion
+        - n = λ_real
+
+        Args:
+            escenario (dict): Escenario importado desde Super24.
+
+        Returns:
+            dict: Parámetros N, n, lambda y mu para precargar campos.
+        """
+        lam, mu = self._derivar_tasas_super24_mm1(escenario)
+        horas = self._derivar_horas_simulacion_super24(escenario)
+        N = max(1, round(lam * horas))
+        n = max(1, round(lam))
+        if n > N:
+            n = N
+        return {"N": N, "n": n, "lambda": lam, "mu": mu}
+
+    def _derivar_horas_simulacion_super24(self, escenario) -> float:
+        """
+        Deriva horas de simulación desde el nombre del escenario o tipo.
+
+        Args:
+            escenario (dict): Escenario importado desde Super24.
+
+        Returns:
+            float: Horas estimadas de duración, mínimo 0.01.
+        """
+        nombre = str(escenario.get("nombre") or "")
+        match = re.search(r"(\d+(?:[\.,]\d+)?)\s*h", nombre, re.IGNORECASE)
+        if match:
+            horas = float(match.group(1).replace(",", "."))
+            return max(0.01, horas)
+        
+        tipo = str(escenario.get("tipo_escenario") or "")
+        horas_por_tipo = {
+            "Día": 8.0,
+            "Semana": 40.0,
+            "Mes": 160.0,
+            "Mañana": 4.0,
+            "Mediodía": 4.0,
+            "Noche": 8.0,
+            "Otros": 8.0,
+        }
+        return horas_por_tipo.get(tipo, 1.0)
+
+    def _obtener_tasas_super24_mm1(self, escenario, valores) -> tuple[float, float]:
+        """
+        Obtiene λ y μ para M/M/1 desde campos manuales o desde la base.
+
+        Args:
+            escenario (dict): Escenario importado desde Super24.
+            valores (dict): Campos capturados desde la interfaz Super24.
+
+        Returns:
+            tuple[float, float]: λ y μ en clientes por hora.
+        """
+        lambda_texto = str(valores.get("mm1_lambda") or "").strip()
+        mu_texto = str(valores.get("mm1_mu") or "").strip()
+        if lambda_texto and mu_texto:
+            return float(lambda_texto), float(mu_texto)
+        return self._derivar_tasas_super24_mm1(escenario)
+
+    def _derivar_tasas_super24_mm1(self, escenario) -> tuple[float, float]:
+        """
+        Deriva λ y μ reales desde métricas observadas del simulador Super24.
+
+        Fórmulas:
+        - μ_real = 60 / (W - Wq)
+        - λ_real = ρ × c × μ_real
+        - Respaldo: λ_real = (Lq / Wq) × 60
+
+        Args:
+            escenario (dict): Escenario importado desde Super24.
+
+        Returns:
+            tuple[float, float]: λ y μ en clientes por hora.
+        """
+        lambda_teorico = float(escenario.get("lambda_h") or 0)
+        mu_teorico = float(escenario.get("mu_h") or 0)
+        w = float(escenario.get("w") or 0)
+        wq = float(escenario.get("wq") or 0)
+        lq = float(escenario.get("lq") or 0)
+        rho = float(escenario.get("rho") or 0)
+        servidores = int(escenario.get("servidores_c") or 1)
+
+        tiempo_servicio = w - wq
+        if tiempo_servicio > 0:
+            mu_real = 60 / tiempo_servicio
+        else:
+            mu_real = mu_teorico
+
+        lambda_real = rho * servidores * mu_real
+        if lambda_real <= 0 and wq > 0:
+            lambda_real = (lq / wq) * 60
+        if lambda_real <= 0:
+            lambda_real = lambda_teorico
+
+        return lambda_real, mu_real
+
+    def _calcular_super24_binomial(self, parametros, x_texto):
+        """Calcula Binomial usando K/N desde ventas importadas."""
+        n = int(parametros["n"])
+        p = float(parametros["p"])
+        N = int(parametros["N"])
+
+        valido, mensaje = validar_parametros(n, p, N)
+        if not valido:
+            messagebox.showerror("Error de Validación", mensaje)
+            return
+
+        valores_x = parsear_valores_x(x_texto, n)
+        valido, mensaje = validar_valores_x(valores_x, n)
+        if not valido:
+            messagebox.showerror("Error de Validación", mensaje)
+            return
+
+        es_infinita = es_poblacion_infinita(n, N)
+        factor_correccion = None if es_infinita else calcular_factor_correccion(n, N)
+        probabilidades = calcular_probabilidades(valores_x, n, p)
+        media = calcular_media(n, p)
+        desviacion = calcular_desviacion_estandar(n, p, N)
+        sesgo, interpretacion_sesgo = calcular_sesgo(n, p, N)
+        curtosis, interpretacion_curtosis = calcular_curtosis(n, p, N)
+
+        datos_resultados = {
+            "n": n,
+            "p": p,
+            "N": N,
+            "K": int(parametros["K"]),
+            "valores_x": valores_x,
+            "probabilidades": probabilidades,
+            "media": media,
+            "desviacion": desviacion,
+            "factor_correccion": factor_correccion,
+            "sesgo": sesgo,
+            "interpretacion_sesgo": interpretacion_sesgo,
+            "curtosis": curtosis,
+            "interpretacion_curtosis": interpretacion_curtosis,
+        }
+
+        if self.dashboard.grafico_mm1:
+            self.dashboard.grafico_mm1.limpiar()
+        self.dashboard.mostrar_vista_resultados_super24()
+        self.dashboard.mostrar_resultados_binomial(datos_resultados)
+        x_destacado = valores_x[0] if len(valores_x) == 1 else None
+        self.dashboard.crear_grafico(
+            valores_x, probabilidades, n, p, N, es_infinita, x_destacado
+        )
+
+    def _calcular_super24_hipergeometrica(self, parametros, x_texto):
+        """Calcula Hipergeométrica usando K desde ventas importadas."""
+        N = int(parametros["N"])
+        K = int(parametros["K"])
+        n = int(parametros["n"])
+
+        valido, mensaje = validar_parametros_hipergeometrica(n, N, K)
+        if not valido:
+            messagebox.showerror("Error de Validación", mensaje)
+            return
+
+        valores_x = parsear_valores_x_hipergeometrica(x_texto, n, K)
+        valido, mensaje = validar_valores_x_hipergeometrica(valores_x, n, K)
+        if not valido:
+            messagebox.showerror("Error de Validación", mensaje)
+            return
+
+        cumple_20, porcentaje_muestra = cumple_condicion_hipergeometrica(n, N)
+        probabilidades = calcular_probabilidades_hipergeometrica(valores_x, n, N, K)
+        media = calcular_media_hipergeometrica(n, N, K)
+        desviacion = calcular_desviacion_hipergeometrica(n, N, K)
+        mediana = calcular_mediana_hipergeometrica(n, N, K)
+        sesgo, interpretacion_sesgo, _ = calcular_sesgo_hipergeometrica(n, N, K)
+        curtosis, interpretacion_curtosis = calcular_curtosis_hipergeometrica(n, N, K)
+
+        datos_resultados = {
+            "N": N,
+            "K": K,
+            "n": n,
+            "p": K / N,
+            "valores_x": valores_x,
+            "probabilidades": probabilidades,
+            "media": media,
+            "desviacion": desviacion,
+            "mediana": mediana,
+            "sesgo": sesgo,
+            "interpretacion_sesgo": interpretacion_sesgo,
+            "curtosis": curtosis,
+            "interpretacion_curtosis": interpretacion_curtosis,
+            "cumple_condicion": cumple_20,
+            "porcentaje_muestra": porcentaje_muestra,
+        }
+
+        if self.dashboard.grafico_mm1:
+            self.dashboard.grafico_mm1.limpiar()
+        self.dashboard.mostrar_vista_resultados_super24()
+        self.dashboard.mostrar_resultados_hipergeometrica(datos_resultados)
+        x_destacado = valores_x[0] if len(valores_x) == 1 else None
+        self.dashboard.crear_grafico_hipergeometrica(
+            valores_x, probabilidades, n, N, K, K / N, x_destacado
+        )
+
+    def _calcular_super24_poisson(self, parametros, x_texto):
+        """Calcula Poisson con λ = n × (K/N) desde ventas importadas."""
+        n = int(parametros["n"])
+        p = float(parametros["p"])
+        lam = float(parametros["lambda_poisson"])
+
+        cumple, advertencia, _ = validar_condiciones_poisson(n, p)
+        if not cumple:
+            messagebox.showwarning("Advertencia de Poisson", advertencia)
+
+        valores_x = parsear_valores_x_poisson(x_texto, lam, n)
+        valido, mensaje = validar_valores_x_poisson(valores_x, n)
+        if not valido:
+            messagebox.showerror("Error de Validación", mensaje)
+            return
+
+        probabilidades = calcular_probabilidades_poisson(valores_x, lam)
+        desviacion = calcular_desviacion_poisson(lam)
+        sesgo, interpretacion_sesgo = calcular_sesgo_poisson(lam)
+        curtosis, interpretacion_curtosis = calcular_curtosis_poisson(lam)
+
+        datos_resultados = {
+            "n": n,
+            "p": p,
+            "N": int(parametros["N"]),
+            "K": int(parametros["K"]),
+            "lambda": lam,
+            "valores_x": valores_x,
+            "probabilidades": probabilidades,
+            "media": lam,
+            "desviacion": desviacion,
+            "sesgo": sesgo,
+            "interpretacion_sesgo": interpretacion_sesgo,
+            "curtosis": curtosis,
+            "interpretacion_curtosis": interpretacion_curtosis,
+        }
+
+        if self.dashboard.grafico_mm1:
+            self.dashboard.grafico_mm1.limpiar()
+        self.dashboard.mostrar_vista_resultados_super24()
+        self.dashboard.mostrar_resultados_poisson(datos_resultados)
+        x_destacado = valores_x[0] if len(valores_x) == 1 else None
+        self.dashboard.crear_grafico_poisson(
+            valores_x, probabilidades, lam, n, p, x_destacado
+        )
 
     def calcular_comparacion(self, n, p, N, valores_x, tolerancia, K_manual=None):
         """

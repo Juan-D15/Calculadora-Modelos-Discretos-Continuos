@@ -53,6 +53,21 @@ class Dashboard:
         self.results_mm1_frame = None
         self.graph_mm1_frame = None
 
+        self.datos_super24 = None
+        self.combo_super24_escenario = None
+        self.combo_super24_categoria = None
+        self.combo_super24_distribucion = None
+        self.toggle_super24 = None
+        self.results_super24_frame = None
+        self.graph_super24_frame = None
+        self.super24_N_entry = None
+        self.super24_n_entry = None
+        self.super24_x_entry = None
+        self.super24_mm1_lambda_entry = None
+        self.super24_mm1_mu_entry = None
+        self.super24_mm1_n_entry = None
+        self.super24_info_label = None
+
         self.ventana_analisis_archivo = None
 
         self.crear_dashboard()
@@ -114,6 +129,20 @@ class Dashboard:
             command=self.abrir_analisis_archivo,
         )
         self.btn_analisis_archivo.pack(fill="x", padx=8, pady=4)
+
+        self.btn_super24 = ctk.CTkButton(
+            self.sidebar,
+            text="Simulador Super24",
+            font=ctk.CTkFont(size=12),
+            fg_color="transparent",
+            hover_color=("gray70", "gray30"),
+            text_color=("gray10", "gray90"),
+            anchor="w",
+            height=38,
+            corner_radius=8,
+            command=lambda: self.cargar_distribucion("super24"),
+        )
+        self.btn_super24.pack(fill="x", padx=8, pady=4)
 
     def abrir_analisis_archivo(self):
         """Abre la ventana de análisis desde archivo"""
@@ -184,6 +213,8 @@ class Dashboard:
             self.crear_interfaz_hipergeometrica()
         elif distribucion == "mm1":
             self.crear_interfaz_mm1()
+        elif distribucion == "super24":
+            self.crear_interfaz_super24()
 
     def actualizar_botones_sidebar(self, distribucion_activo):
         """Actualiza el estado visual de los botones del sidebar"""
@@ -192,6 +223,7 @@ class Dashboard:
             "poisson": self.btn_poisson,
             "hipergeometrica": self.btn_hipergeometrica,
             "mm1": self.btn_mm1,
+            "super24": self.btn_super24,
         }
 
         for dist, btn in botones.items():
@@ -530,6 +562,308 @@ class Dashboard:
         self.area_resultados = AreaResultados(self.results_mm1_frame)
         self.grafico_mm1 = GraficoMM1(self.graph_mm1_frame)
 
+    def crear_interfaz_super24(self):
+        """Crea la interfaz para análisis desde base de datos Super24."""
+        titulo = ctk.CTkLabel(
+            self.content_frame,
+            text="SIMULADOR SUPER24",
+            font=ctk.CTkFont(size=22, weight="bold"),
+        )
+        titulo.pack(pady=(12, 8))
+
+        descripcion = ctk.CTkLabel(
+            self.content_frame,
+            text="Importa la última corrida y alimenta Binomial, Hipergeométrica o M/M/1",
+            font=ctk.CTkFont(size=11),
+            text_color="gray",
+        )
+        descripcion.pack(pady=(0, 12))
+
+        input_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        input_frame.pack(fill="x", padx=15, pady=5)
+
+        row1 = ctk.CTkFrame(input_frame, fg_color="transparent")
+        row1.pack(fill="x", pady=4)
+
+        load_btn = ctk.CTkButton(
+            row1,
+            text="Cargar última corrida",
+            command=self.cargar_datos_super24,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            height=36,
+            width=170,
+            fg_color="#3b8ed0",
+            hover_color="#3672a9",
+        )
+        load_btn.pack(side="left", padx=8)
+
+        self.super24_info_label = ctk.CTkLabel(
+            row1,
+            text="Sin datos cargados",
+            font=ctk.CTkFont(size=11),
+            text_color="gray",
+        )
+        self.super24_info_label.pack(side="left", padx=8)
+
+        row2 = ctk.CTkFrame(input_frame, fg_color="transparent")
+        row2.pack(fill="x", pady=4)
+
+        ctk.CTkLabel(row2, text="Escenario:", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+        self.combo_super24_escenario = ctk.CTkComboBox(
+            row2, width=180, values=[], command=self._actualizar_categorias_super24
+        )
+        self.combo_super24_escenario.pack(side="left", padx=8)
+
+        ctk.CTkLabel(row2, text="Categoría:", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+        self.combo_super24_categoria = ctk.CTkComboBox(
+            row2, width=180, values=[], command=self._actualizar_info_super24
+        )
+        self.combo_super24_categoria.pack(side="left", padx=8)
+
+        ctk.CTkLabel(row2, text="Distribución:", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+        self.combo_super24_distribucion = ctk.CTkComboBox(
+            row2,
+            width=160,
+            values=["Automática", "Binomial", "Hipergeométrica", "Poisson", "M/M/1"],
+        )
+        self.combo_super24_distribucion.set("Automática")
+        self.combo_super24_distribucion.pack(side="left", padx=8)
+
+        row3 = ctk.CTkFrame(input_frame, fg_color="transparent")
+        row3.pack(fill="x", pady=4)
+
+        ctk.CTkLabel(row3, text="Inventario bodega (N):", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+        self.super24_N_entry = ctk.CTkEntry(row3, width=120, placeholder_text="Ej: 1000")
+        self.super24_N_entry.pack(side="left", padx=8)
+
+        ctk.CTkLabel(row3, text="Tamaño muestra (n):", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+        self.super24_n_entry = ctk.CTkEntry(row3, width=120, placeholder_text="Ej: 100")
+        self.super24_n_entry.pack(side="left", padx=8)
+
+        ctk.CTkLabel(row3, text="Valores X:", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+        self.super24_x_entry = ctk.CTkEntry(
+            row3, width=220, placeholder_text="Ej: 5, 0,1,2 o vacío"
+        )
+        self.super24_x_entry.pack(side="left", padx=8)
+
+        row4 = ctk.CTkFrame(input_frame, fg_color="transparent")
+        row4.pack(fill="x", pady=4)
+
+        ctk.CTkLabel(row4, text="λ M/M/1:", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+        self.super24_mm1_lambda_entry = ctk.CTkEntry(
+            row4, width=95, placeholder_text="Desde BD"
+        )
+        self.super24_mm1_lambda_entry.pack(side="left", padx=8)
+
+        ctk.CTkLabel(row4, text="μ M/M/1:", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+        self.super24_mm1_mu_entry = ctk.CTkEntry(
+            row4, width=95, placeholder_text="Desde BD"
+        )
+        self.super24_mm1_mu_entry.pack(side="left", padx=8)
+
+        ctk.CTkLabel(row4, text="Clientes n M/M/1:", font=ctk.CTkFont(size=13)).pack(
+            side="left", padx=8
+        )
+        self.super24_mm1_n_entry = ctk.CTkEntry(
+            row4, width=120, placeholder_text="Opcional"
+        )
+        self.super24_mm1_n_entry.pack(side="left", padx=8)
+
+        calc_btn = ctk.CTkButton(
+            row4,
+            text="Calcular con datos del simulador",
+            command=self.calcular_super24,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            height=36,
+            width=230,
+            fg_color="#27ae60",
+            hover_color="#219a52",
+        )
+        calc_btn.pack(side="left", padx=12)
+
+        toggle_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        toggle_frame.pack(fill="x", padx=15, pady=(0, 5))
+
+        self.toggle_super24 = ctk.CTkSegmentedButton(
+            toggle_frame,
+            values=["Resultados", "Gráficos"],
+            command=self._cambiar_vista_super24,
+            selected_color="#3b8ed0",
+            selected_hover_color="#3672a9",
+        )
+        self.toggle_super24.set("Resultados")
+        self.toggle_super24.pack()
+
+        results_container = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        results_container.pack(fill="both", expand=True, padx=12, pady=8)
+        results_container.grid_columnconfigure(0, weight=1)
+        results_container.grid_rowconfigure(0, weight=1)
+
+        self.results_super24_frame = ctk.CTkFrame(results_container)
+        self.results_super24_frame.grid(row=0, column=0, sticky="nsew")
+
+        self.graph_super24_frame = ctk.CTkFrame(results_container)
+        self.graph_super24_frame.grid(row=0, column=0, sticky="nsew")
+        self.graph_super24_frame.grid_remove()
+
+        self.area_resultados = AreaResultados(self.results_super24_frame)
+        self.grafico = GraficoBinomial(self.graph_super24_frame)
+        self.grafico_mm1 = GraficoMM1(self.graph_super24_frame)
+
+        if self.datos_super24:
+            self.actualizar_datos_super24(self.datos_super24)
+
+    def cargar_datos_super24(self):
+        """Solicita a la ventana principal cargar datos de Super24."""
+        if self.ventana_principal:
+            self.ventana_principal.cargar_datos_super24()
+
+    def calcular_super24(self):
+        """Solicita a la ventana principal calcular con datos de Super24."""
+        if self.ventana_principal:
+            self.ventana_principal.calcular_super24()
+
+    def actualizar_datos_super24(self, datos):
+        """Actualiza selectores con datos cargados desde la base de datos."""
+        self.datos_super24 = datos
+        if not self.combo_super24_escenario:
+            return
+
+        escenarios = datos.get("escenarios", [])
+        valores = [self._formatear_escenario_super24(escenario) for escenario in escenarios]
+        self.combo_super24_escenario.configure(values=valores)
+        if valores:
+            self.combo_super24_escenario.set(valores[0])
+            self._actualizar_categorias_super24(valores[0])
+
+        ejecucion = datos.get("ejecucion") or {}
+        texto = f"Escenarios por tipo | {len(escenarios)} registrados"
+        self.super24_info_label.configure(text=texto)
+        self._actualizar_info_super24()
+
+    def obtener_campos_super24(self):
+        """Obtiene valores del panel Super24."""
+        if not self.combo_super24_escenario:
+            return None
+        return {
+            "escenario": self.combo_super24_escenario.get(),
+            "categoria": self.combo_super24_categoria.get(),
+            "distribucion": self.combo_super24_distribucion.get(),
+            "N": self.super24_N_entry.get().strip(),
+            "n": self.super24_n_entry.get().strip(),
+            "x": self.super24_x_entry.get().strip(),
+            "mm1_lambda": self.super24_mm1_lambda_entry.get().strip(),
+            "mm1_mu": self.super24_mm1_mu_entry.get().strip(),
+            "mm1_n": self.super24_mm1_n_entry.get().strip(),
+        }
+
+    def obtener_escenario_super24_seleccionado(self):
+        """Retorna el escenario seleccionado como diccionario."""
+        if not self.datos_super24 or not self.combo_super24_escenario:
+            return None
+        seleccionado = self.combo_super24_escenario.get()
+        for escenario in self.datos_super24.get("escenarios", []):
+            if self._formatear_escenario_super24(escenario) == seleccionado:
+                return escenario
+        return None
+
+    def obtener_ventas_super24_seleccionadas(self):
+        """Retorna las ventas agregadas para la categoría seleccionada."""
+        escenario = self.obtener_escenario_super24_seleccionado()
+        if not escenario or not self.datos_super24:
+            return None
+
+        ventas = self.datos_super24.get("ventas_por_escenario", {}).get(escenario["id"], [])
+        categoria = self.combo_super24_categoria.get() if self.combo_super24_categoria else ""
+        if categoria == "Todas":
+            total = sum(int(item.get("unidades_promedio") or 0) for item in ventas)
+            return {"categoria": "Todas", "unidades_promedio": total}
+
+        for item in ventas:
+            if item.get("categoria") == categoria:
+                return item
+        return None
+
+    def _actualizar_categorias_super24(self, _valor=None):
+        """Actualiza categorías cuando cambia el escenario seleccionado."""
+        if not self.datos_super24 or not self.combo_super24_categoria:
+            return
+        escenario = self.obtener_escenario_super24_seleccionado()
+        if not escenario:
+            return
+
+        ventas = self.datos_super24.get("ventas_por_escenario", {}).get(escenario["id"], [])
+        categorias = [item.get("categoria", "Sin categoría") for item in ventas]
+        valores = ["Todas", *categorias] if categorias else []
+        self.combo_super24_categoria.configure(values=valores)
+        if valores:
+            self.combo_super24_categoria.set(valores[0])
+        self._precargar_parametros_super24(escenario)
+        self._actualizar_info_super24()
+
+    def _precargar_parametros_super24(self, escenario):
+        """Precarga N, n, λ y μ observadas en campos editables."""
+        if (
+            not self.ventana_principal
+            or not self.super24_N_entry
+            or not self.super24_n_entry
+            or not self.super24_mm1_lambda_entry
+            or not self.super24_mm1_mu_entry
+            or not escenario
+        ):
+            return
+
+        parametros = self.ventana_principal.precargar_parametros_super24(escenario)
+        self.super24_N_entry.delete(0, "end")
+        self.super24_N_entry.insert(0, str(parametros["N"]))
+        self.super24_n_entry.delete(0, "end")
+        self.super24_n_entry.insert(0, str(parametros["n"]))
+        self.super24_mm1_lambda_entry.delete(0, "end")
+        self.super24_mm1_lambda_entry.insert(0, f"{parametros['lambda']:.4f}")
+        self.super24_mm1_mu_entry.delete(0, "end")
+        self.super24_mm1_mu_entry.insert(0, f"{parametros['mu']:.4f}")
+
+    def _actualizar_info_super24(self, _valor=None):
+        """Muestra la corrida y el K importado para guiar el valor mínimo de N."""
+        if not self.super24_info_label or not self.datos_super24:
+            return
+
+        escenarios = self.datos_super24.get("escenarios", [])
+        ventas = self.obtener_ventas_super24_seleccionadas()
+        texto = f"Escenarios por tipo | {len(escenarios)} registrados"
+
+        if ventas:
+            categoria = ventas.get("categoria", "--")
+            k_importado = int(ventas.get("unidades_promedio") or 0)
+            texto = f"{texto} | K importado ({categoria}): {k_importado} | N mínimo: {k_importado}"
+
+        self.super24_info_label.configure(text=texto)
+
+    @staticmethod
+    def _formatear_escenario_super24(escenario):
+        """Formatea escenario para mostrarlo en el selector."""
+        texto = f"{escenario.get('id')} - {escenario.get('nombre', 'Sin nombre')}"
+        tipo = escenario.get("tipo_escenario")
+        if tipo:
+            return f"{tipo} | {texto}"
+        return texto
+
     def _cambiar_vista_mm1(self, valor):
         """Cambia entre vista de resultados y gráficos"""
         if valor == "Resultados":
@@ -538,6 +872,23 @@ class Dashboard:
         else:
             self.results_mm1_frame.grid_remove()
             self.graph_mm1_frame.grid()
+
+    def _cambiar_vista_super24(self, valor):
+        """Cambia entre resultados y gráficos en Simulador Super24."""
+        if not self.results_super24_frame or not self.graph_super24_frame:
+            return
+        if valor == "Resultados":
+            self.results_super24_frame.grid()
+            self.graph_super24_frame.grid_remove()
+        else:
+            self.results_super24_frame.grid_remove()
+            self.graph_super24_frame.grid()
+
+    def mostrar_vista_resultados_super24(self):
+        """Vuelve a la vista de resultados tras calcular en Super24."""
+        if self.toggle_super24:
+            self.toggle_super24.set("Resultados")
+        self._cambiar_vista_super24("Resultados")
 
     def calcular_mm1(self):
         """Calcula el modelo M/M/1"""

@@ -4,7 +4,7 @@ This file provides guidelines for agentic coding agents working in this reposito
 
 ## Project Overview
 
-Binomial Distribution Calculator - Python GUI for statistical distributions (Binomial/Hypergeometric). Built with CustomTkinter and Matplotlib.
+Binomial Distribution Calculator - Python GUI for statistical distributions (Binomial/Hypergeometric/Poisson) and Queueing Theory (M/M/1). Built with CustomTkinter and Matplotlib.
 
 ## Running
 
@@ -17,7 +17,7 @@ python main.py
 
 No formal test/lint framework configured. When adding:
 
-- **Testing**: `pytest tests/` or `pytest tests/test_calculos.py::test_name`
+- **Testing**: `pytest tests/` or `python -m utils.mm1_queue` (for M/M/1 tests)
 - **Linting**: `ruff check .` or `ruff check --fix .`
 - **Type checking**: `mypy .`
 
@@ -136,18 +136,20 @@ Provides: automatic centering, single instance control, modal behavior, matplotl
 ├── base_window.py           # Base class for secondary windows
 ├── gui/
 │   ├── dashboard.py         # Main dashboard with sidebar
-│   ├── grafico.py           # Matplotlib chart wrapper
+│   ├── grafico.py           # Matplotlib chart wrappers
 │   ├── campos_entrada.py    # Input field components
 │   └── area_resultados.py   # Results display widget
 └── utils/
     ├── calculos.py          # Statistical calculations
     ├── validaciones.py      # Input validation
-    └── formato.py           # Result formatting
+    ├── formato.py          # Result formatting
+    └── mm1_queue.py         # M/M/1 queue model
 ```
 
 ### Key Points
 
 - Use `math` module (`math.sqrt`, `math.factorial`) and `numpy` for arrays (`np.linspace`, `np.interp`)
 - Statistical params: `n` (trials), `p` (probability), `N` (population), `K` (successes in pop), `x/k` (value)
+- M/M/1 params: `lam` (λ, arrival rate), `mu` (μ, service rate)
 - Spanish for user-facing strings and docstrings
 - Always clean up matplotlib figures with `plt.close(figura)`

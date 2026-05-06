@@ -31,7 +31,88 @@ class ProbabilityEngine:
         >>> prob = engine.calcular_probabilidad(100, 30, 25, 5, modelo)
     """
     
+    UMBRAL_POBLACION_INFINITA = 0.05
     UMBRAL_HIPERGEOMETRICA = 0.20
+    
+    def recomendar_modelo_por_umbral(self, n: int, N: int) -> Dict[str, object]:
+        """
+        Recomienda distribución usando los umbrales del 5% y 20%.
+
+        Args:
+            n (int): Tamaño de muestra.
+            N (int): Inventario o población ficticia.
+
+        Returns:
+            dict: Modelo recomendado, porcentaje y uso de corrección finita.
+        """
+        if N is None or N <= 0:
+            raise ParametrosInvalidosError(
+                "El inventario/población (N) debe ser mayor a 0."
+            )
+        if n is None or n <= 0:
+            raise ParametrosInvalidosError("El tamaño de muestra (n) debe ser mayor a 0.")
+        if n > N:
+            raise ParametrosInvalidosError(f"n ({n}) no puede ser mayor que N ({N}).")
+
+        proporcion = n / N
+        porcentaje = proporcion * 100
+
+        if proporcion >= self.UMBRAL_HIPERGEOMETRICA:
+            return {
+                "modelo_recomendado": "Hipergeométrica",
+                "usa_correccion_finita": True,
+                "porcentaje_muestra": porcentaje,
+                "motivo": "n representa 20% o más de N",
+            }
+        if proporcion > self.UMBRAL_POBLACION_INFINITA:
+            return {
+                "modelo_recomendado": "Binomial",
+                "usa_correccion_finita": True,
+                "porcentaje_muestra": porcentaje,
+                "motivo": "n supera 5% de N, pero no alcanza 20%",
+            }
+        return {
+            "modelo_recomendado": "Binomial",
+            "usa_correccion_finita": False,
+            "porcentaje_muestra": porcentaje,
+            "motivo": "n es menor o igual al 5% de N",
+        }
+    
+    def preparar_parametros_desde_ventas(self, N: int, K: int, n: int) -> Dict[str, object]:
+        """
+        Prepara parámetros estadísticos desde ventas importadas del simulador.
+
+        Args:
+            N (int): Inventario o población ficticia.
+            K (int): Éxitos esperados en población desde unidades vendidas.
+            n (int): Tamaño de muestra a evaluar.
+
+        Returns:
+            dict: Parámetros N, K, n, p y recomendación de modelo.
+        """
+        if K is None or K < 0:
+            raise ParametrosInvalidosError("K no puede ser negativo.")
+        if N is None or N <= 0:
+            raise ParametrosInvalidosError(
+                "El inventario/población (N) debe ser mayor a 0."
+            )
+        if K > N:
+            raise ParametrosInvalidosError(
+                f"Las unidades vendidas importadas (K={K}) no pueden ser mayores "
+                f"que el inventario/población ingresado (N={N}). "
+                f"Ingrese un inventario N mayor o igual a {K}, o seleccione una categoría "
+                "con menos unidades vendidas."
+            )
+
+        recomendacion = self.recomendar_modelo_por_umbral(n, N)
+        return {
+            "N": N,
+            "K": K,
+            "n": n,
+            "p": K / N,
+            "lambda_poisson": n * (K / N),
+            **recomendacion,
+        }
     
     def seleccionar_modelo(self, n: int, N: int) -> str:
         """
